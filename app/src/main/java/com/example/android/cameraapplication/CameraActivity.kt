@@ -15,10 +15,11 @@ import androidx.camera.core.Preview
 
 class CameraActivity : AppCompatActivity() {
 
-    var numReps: Int = intent.getIntExtra("numReps", 0)
-    var numSeries: Int = intent.getIntExtra("numSets", 0)
-    var restTimeMinutes: Int = intent.getIntExtra("restSeconds", 0)
-    var restTimeSeconds: Int = intent.getIntExtra("restMinutes", 0)
+    var numReps: Int = 0
+    var numSeries: Int = 0
+    var restTimeMinutes: Int = 0
+    var restTimeSeconds: Int = 0
+
 
     private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
     companion object{
@@ -31,6 +32,11 @@ class CameraActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
+
+        numReps = intent.getIntExtra("numReps", 0)
+        numSeries = intent.getIntExtra("numSets", 0)
+        restTimeMinutes = intent.getIntExtra("restSeconds", 0)
+        restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
         requestCameraPermissions()
         cameraProviderFuture = ProcessCameraProvider.getInstance(this)
@@ -74,10 +80,6 @@ class CameraActivity : AppCompatActivity() {
             }
         }
 
-        println("Num reps: $numReps")
-        println("Num sets: $numSeries")
-        println("Num seconds: $restTimeSeconds")
-        println("Num minutes: $restTimeMinutes")
     }
 
     private fun requestCameraPermissions() {
@@ -107,5 +109,4 @@ class CameraActivity : AppCompatActivity() {
             }
         }
     }
-
 }
