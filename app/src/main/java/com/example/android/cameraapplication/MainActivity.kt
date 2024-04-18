@@ -1,6 +1,6 @@
 package com.example.android.cameraapplication
 
-import android.content.pm.PackageManager
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.camera.core.CameraSelector
@@ -22,6 +22,9 @@ import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import android.widget.Button
+import android.widget.TextView
+
 
 class MainActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListener {
     companion object {
@@ -212,87 +215,19 @@ class MainActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListene
 
 class MainActivity1 : AppCompatActivity() {
 
-    private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
-    companion object{
-        private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
-    }
 
-    var cam: CameraSelector? = null
-    var camProv: ProcessCameraProvider? = null
-    var prev: Preview? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        requestCameraPermissions()
-        cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-
-            camProv = cameraProvider
-
-            val previewView = findViewById<PreviewView>(R.id.previewView)
-
-            val preview = androidx.camera.core.Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
-                }
-
-            prev = preview
-
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-            cam = cameraSelector
-
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, ContextCompat.getMainExecutor(this))
-
-        findViewById<Button>(R.id.button2).setOnClickListener{
-            if(cam == CameraSelector.DEFAULT_FRONT_CAMERA)
-                cam = CameraSelector.DEFAULT_BACK_CAMERA
-            else
-                cam = CameraSelector.DEFAULT_FRONT_CAMERA
-            try {
-                camProv?.unbindAll()
-                camProv?.bindToLifecycle(this, cam!!, prev)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        findViewById<Button>(R.id.button).setOnClickListener{
+            val intent = Intent(this, CameraActivity::class.java)
+            intent.putExtra("numReps", findViewById<TextView>(R.id.editTextNumber5).text.toString().toInt())
+            intent.putExtra("numSets", findViewById<TextView>(R.id.editTextNumber4).text.toString().toInt())
+            intent.putExtra("restSeconds", findViewById<TextView>(R.id.editTextNumber3).text.toString().toInt())
+            intent.putExtra("restMinutes", findViewById<TextView>(R.id.editTextNumber).text.toString().toInt())
+            startActivity(intent)
         }
-    }
 
-    private fun requestCameraPermissions() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(Manifest.permission.CAMERA),
-                CAMERA_PERMISSION_REQUEST_CODE
-            )
-        }
     }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if (!(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                // Permesso della fotocamera non ottenuto, chiudi l'app
-                finish()
-            }
-        }
-    }
-
 }
