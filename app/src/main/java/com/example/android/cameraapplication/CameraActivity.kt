@@ -1,35 +1,52 @@
 package com.example.android.cameraapplication
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
+import androidx.camera.core.AspectRatio
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.common.util.concurrent.ListenableFuture
-import android.Manifest
-import android.widget.Button
-import androidx.camera.core.Preview
+import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
+import com.google.mediapipe.tasks.vision.core.RunningMode
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
-class CameraActivity : AppCompatActivity() {
+var numReps: Int = 0
+var numSeries: Int = 0
+var restTimeMinutes: Int = 0
+var restTimeSeconds: Int = 0
 
-    var numReps: Int = 0
-    var numSeries: Int = 0
-    var restTimeMinutes: Int = 0
-    var restTimeSeconds: Int = 0
-
-
-    private lateinit var cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
-    companion object{
+class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListener {
+    companion object {
+        //QUESTO è PRESO DAL CODICE DI DENNY
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
+        private const val TAG = "Pose Landmarker"
     }
+    private lateinit var poseLandmarkerHelper: PoseLandmarkerHelper
+    //private val viewModel: MainViewModel by activityViewModels()
+    private var preview: Preview? = null
+    private var imageAnalyzer: ImageAnalysis? = null
+    private var camera: Camera? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
+    //QUESTO è PRESO DAL CODICE DI DENNY
+    private lateinit var previewView : PreviewView
 
-    var cam: CameraSelector? = null
-    var camProv: ProcessCameraProvider? = null
-    var prev: Preview? = null
+    /** Blocking ML operations are performed using this executor */
+    private lateinit var backgroundExecutor: ExecutorService
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        //Log.d(TAG, "DebugMess: ")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
 
@@ -39,49 +56,149 @@ class CameraActivity : AppCompatActivity() {
         restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
         requestCameraPermissions()
-        cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+        previewView = findViewById<PreviewView>(R.id.previewView)
+        setUpCamera()
+        backgroundExecutor = Executors.newSingleThreadExecutor()
 
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
+        backgroundExecutor.execute {
+            poseLandmarkerHelper = PoseLandmarkerHelper(
+                //context = requireContext(),
+                context = this,
+                runningMode = RunningMode.LIVE_STREAM,
+                //minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
+                //minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
+                //minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
+                //currentDelegate = viewModel.currentDelegate,
+                minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
+                minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
+                minPosePresenceConfidence = PoseLandmarkerHelper.DEFAULT_POSE_PRESENCE_CONFIDENCE,
+                currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
+                poseLandmarkerHelperListener = this
+            )
+        }
+    }
+    private fun setUpCamera() {
+        val cameraProviderFuture =
+            //ProcessCameraProvider.getInstance(requireContext())
+            ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener(
+            {
+                // CameraProvider
+                cameraProvider = cameraProviderFuture.get()
 
-            camProv = cameraProvider
+                // Build and bind the camera use cases
+                bindCameraUseCases()
+                //}, ContextCompat.getMainExecutor(requireContext())
+            }, ContextCompat.getMainExecutor(this)
+        )
+    }
+    @SuppressLint("UnsafeOptInUsageError")
+    private fun bindCameraUseCases() {
+        // CameraProvider
+        val cameraProvider = cameraProvider
+            ?: throw IllegalStateException("Camera initialization failed.")
 
-            val previewView = findViewById<PreviewView>(R.id.previewView)
+        val cameraSelector =
+            CameraSelector.Builder().requireLensFacing(cameraFacing).build()
 
-            val preview = androidx.camera.core.Preview.Builder()
+        // Preview. Only using the 4:3 ratio because this is the closest to our models
+        preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
+            //.setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
+            .build()
+        //Log.d(TAG, "DebugMess: ")
+        // ImageAnalysis. Using RGBA 8888 to match how our models work
+        imageAnalyzer =
+            ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
+                //.setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
                 .build()
+                // The analyzer can then be assigned to the instance
                 .also {
-                    it.setSurfaceProvider(previewView.surfaceProvider)
+                    it.setAnalyzer(backgroundExecutor) { image ->
+                        detectPose(image)
+                    }
                 }
 
-            prev = preview
+        // Must unbind the use-cases before rebinding them
+        cameraProvider.unbindAll()
 
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-            cam = cameraSelector
+        try {
+            // A variable number of use-cases can be passed here -
+            // camera provides access to CameraControl & CameraInfo
+            camera = cameraProvider.bindToLifecycle(
+                this, cameraSelector, preview, imageAnalyzer
+            )
+            // Attach the viewfinder's surface provider to preview use case
+            //preview?.setSurfaceProvider(fragmentCameraBinding.viewFinder.surfaceProvider)
+            preview?.setSurfaceProvider(previewView.surfaceProvider)
+        } catch (exc: Exception) {
+            //Log.e(CameraFragment.TAG, "Use case binding failed", exc)
+            Log.e(TAG, "Use case binding failed", exc)
+        }
+    }
+    private fun detectPose(imageProxy: ImageProxy) {
+        if(this::poseLandmarkerHelper.isInitialized) {
+            //Log.d(TAG, "DebugMess: ")
+            poseLandmarkerHelper.detectLiveStream(
+                imageProxy = imageProxy,
+                isFrontCamera = cameraFacing == CameraSelector.LENS_FACING_FRONT
+            )
+        }
+    }
+    override fun onResults(
+        resultBundle: PoseLandmarkerHelper.ResultBundle
+    ) {
 
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }, ContextCompat.getMainExecutor(this))
 
-        findViewById<Button>(R.id.button2).setOnClickListener{
-            if(cam == CameraSelector.DEFAULT_FRONT_CAMERA)
-                cam = CameraSelector.DEFAULT_BACK_CAMERA
-            else
-                cam = CameraSelector.DEFAULT_FRONT_CAMERA
-            try {
-                camProv?.unbindAll()
-                camProv?.bindToLifecycle(this, cam!!, prev)
-            } catch (e: Exception) {
-                e.printStackTrace()
+        println("Entro nella funzione")
+        resultBundle.results[0]?.let { poseLandmarkerResult ->
+            for(landmark in poseLandmarkerResult.landmarks()) {
+                for (normalizedLandmark in landmark) {
+                        println(normalizedLandmark.x().toString() + " " + normalizedLandmark.y().toString() + "\n")
+                }
+                println("End of landmarks")
+            }}
+
+
+
+        /*
+        activity?.runOnUiThread {
+            if (_fragmentCameraBinding != null) {
+                fragmentCameraBinding.bottomSheetLayout.inferenceTimeVal.text =
+                    String.format("%d ms", resultBundle.inferenceTime)
+
+                // Pass necessary information to OverlayView for drawing on the canvas
+                fragmentCameraBinding.overlay.setResults(
+                    resultBundle.results.first(),
+                    resultBundle.inputImageHeight,
+                    resultBundle.inputImageWidth,
+                    RunningMode.LIVE_STREAM
+                )
+
+                // Force a redraw
+                fragmentCameraBinding.overlay.invalidate()
             }
         }
 
+         */
     }
 
+    override fun onError(error: String, errorCode: Int) {
+        Log.d(TAG, "onError")
+        /*
+        activity?.runOnUiThread {
+            Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
+            if (errorCode == PoseLandmarkerHelper.GPU_ERROR) {
+                fragmentCameraBinding.bottomSheetLayout.spinnerDelegate.setSelection(
+                    PoseLandmarkerHelper.DELEGATE_CPU, false
+                )
+            }
+        }
+
+         */
+    }
+    //QUESTO è PRESO DAL CODICE DI DENNY
     private fun requestCameraPermissions() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -95,7 +212,7 @@ class CameraActivity : AppCompatActivity() {
             )
         }
     }
-
+    //QUESTO è PRESO DAL CODICE DI DENNY
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
