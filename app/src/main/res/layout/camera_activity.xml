@@ -8,37 +8,76 @@
 
     <!--aggiunto-->
     <androidx.camera.view.PreviewView
-        android:id="@+id/previewView"
-        android:layout_width="385dp"
-        android:layout_height="461dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.5" />
-    <!--fine aggiunto-->
-
-    <Button
-        android:id="@+id/button2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="39dp"
-        android:text="Change"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/previewView" />
+            android:id="@+id/previewView"
+            android:layout_width="385dp"
+            android:layout_height="461dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.5" />
 
     <TextView
-        android:id="@+id/textView"
-        android:layout_width="413dp"
-        android:layout_height="49dp"
-        android:text="@string/app_name"
-        android:theme="@style/Base.Theme.CameraApplication"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/repTV"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="20dp"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+            android:text="REP:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/repLabel"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="20dp"
+            app:layout_constraintEnd_toStartOf="@id/repTV"
+            android:layout_marginEnd="10dp"
+            android:textStyle="bold" />
+
+    <TextView
+            android:text="SERIES:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/seriesLabel"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="50dp"
+            app:layout_constraintEnd_toStartOf="@id/seriesTV"
+            android:layout_marginEnd="10dp"
+            android:textStyle="bold" />
+
+    <TextView
+            android:text="BPM:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/bpmLabel"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="80dp"
+            app:layout_constraintEnd_toStartOf="@id/bpmTV"
+            android:layout_marginEnd="10dp"
+            android:textStyle="bold" />
+
+    <TextView
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/seriesTV"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="50dp"
+            android:layout_marginEnd="20dp"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+    <TextView
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:id="@+id/bpmTV"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="80dp"
+            android:layout_marginEnd="20dp"
+            app:layout_constraintEnd_toEndOf="parent" />
+    <!--fine aggiunto-->
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 
