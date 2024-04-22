@@ -17,9 +17,12 @@ import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
+import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.acos
+import kotlin.math.sqrt
 
 var numReps: Int = 0
 var numSeries: Int = 0
@@ -38,7 +41,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_BACK
+    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
     //QUESTO è PRESO DAL CODICE DI DENNY
     private lateinit var previewView : PreviewView
 
@@ -150,15 +153,26 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         resultBundle: PoseLandmarkerHelper.ResultBundle
     ) {
 
-
-        println("Entro nella funzione")
         resultBundle.results[0]?.let { poseLandmarkerResult ->
             for(landmark in poseLandmarkerResult.landmarks()) {
-                for (normalizedLandmark in landmark) {
+                    //user detected
+                    ExerciseManager.setCurrentLandmark(landmark)
+                    if(ExerciseManager.isExerciseInProgress){
+                        ExerciseManager.checkSquatPhase()
+                        //ExerciseManager.checkForm()
+                    }else {
+                        println("Exercise NOT in Progress")
+                        if (ExerciseManager.checkStart()) ExerciseManager.isExerciseInProgress = true
+                    }
+
+
+                /*for (normalizedLandmark in landmark) {
                         println(normalizedLandmark.x().toString() + " " + normalizedLandmark.y().toString() + "\n")
                 }
                 println("End of landmarks")
-            }}
+                */
+            }
+        }
 
 
 
@@ -224,6 +238,58 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                 // Permesso della fotocamera non ottenuto, chiudi l'app
                 finish()
             }
+        }
+    }
+}
+
+
+class ExerciseManager {
+    companion object {
+        var isExerciseInProgress: Boolean = false
+
+        private lateinit var currentLandmark: List<NormalizedLandmark>
+        private var proximityThreshold: Float = 0.0f
+        private var currentPhase: Int = -1
+        fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
+            currentLandmark = landmark
+            val noseMouthL = relativeDistance(currentLandmark.get(0), currentLandmark.get(9))
+            val noseMouthR = relativeDistance(currentLandmark.get(0), currentLandmark.get(10))
+            val noseMouth = (noseMouthL + noseMouthR) / 2
+            proximityThreshold = noseMouth
+        }
+
+        fun checkStart(): Boolean {
+            val dist = relativeDistance(currentLandmark.get(19), currentLandmark.get(0))
+            if(dist < proximityThreshold){
+                return true
+            }else return false
+        }
+
+        fun checkSquatPhase(): Int {
+            val angle = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+            println(angle)
+            return 1
+        }
+        fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
+            val dx = a.x() - b.x()
+            val dy = a.y() - b.y()
+            val dz = a.z() - b.z()
+            return sqrt(dx * dx + dy * dy + dz * dz)
+        }
+        fun dotProduct(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+            val abx = b.x() - a.x()
+            val aby = b.y() - a.y()
+            val abz = b.z() - a.z()
+            val bcx = c.x() - b.x()
+            val bcy = c.y() - b.y()
+            val bcz = c.z() - b.z()
+            return abx * bcx + aby * bcy + abz * bcz
+        }
+        fun angleBetweenPoints(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+            val dot = dotProduct(a, b, c)
+            val magAB = relativeDistance(a, b)
+            val magBC = relativeDistance(b, c)
+            return acos(dot / (magAB * magBC))
         }
     }
 }
