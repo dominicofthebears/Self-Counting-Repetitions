@@ -158,7 +158,10 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                     //user detected
                     ExerciseManager.setCurrentLandmark(landmark)
                     if(ExerciseManager.isExerciseInProgress){
-                        ExerciseManager.checkSquatPhase()
+                        val phase = ExerciseManager.checkSquatPhase()
+                        ExerciseManager.updateRepCount(phase)
+                        println(ExerciseManager.repCount)
+
                         //ExerciseManager.checkForm()
                     }else {
                         println("Exercise NOT in Progress")
@@ -245,11 +248,21 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
 class ExerciseManager {
     companion object {
-        var isExerciseInProgress: Boolean = false
+        var isExerciseInProgress: Boolean = true
+        var repCount: Int = 0
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
         private var proximityThreshold: Float = 0.0f
-        private var currentPhase: Int = -1
+        private var exerciseState = 0
+
+        private const val G30 = 0.523
+        private const val G45 = 0.785f
+        private const val G60 = 1.047f
+        private const val G90 = 1.570f
+        private const val G120 = 2.094f
+        private const val G150 = 2.618f
+        private const val G180 = 3.141f
+
         fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
             currentLandmark = landmark
             val noseMouthL = relativeDistance(currentLandmark.get(0), currentLandmark.get(9))
@@ -267,8 +280,29 @@ class ExerciseManager {
 
         fun checkSquatPhase(): Int {
             val angle = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
-            println(angle)
-            return 1
+            var phase = 0
+            when {
+                angle > G150 -> phase = 0
+                (angle > G90) and (angle <= G150) -> phase = 1
+                (angle > G60) and (angle <= G90) -> phase = 2
+                (angle <= G60) -> phase = 3
+            }
+            return phase
+        }
+        fun updateRepCount(phase: Int): Boolean{
+            when {
+                (exerciseState == 0) and (phase == 1) -> exerciseState++
+                (exerciseState == 1) and (phase == 2) -> exerciseState++
+                (exerciseState == 2) and (phase == 3) -> exerciseState++
+                (exerciseState == 3) and (phase == 2) -> exerciseState++
+                (exerciseState == 4) and (phase == 1) -> exerciseState++
+                (exerciseState == 5) and (phase == 0) -> {
+                    exerciseState = 0
+                    repCount++
+                    return true
+                }
+            }
+            return false
         }
         fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
             val dx = a.x() - b.x()
@@ -280,9 +314,9 @@ class ExerciseManager {
             val abx = b.x() - a.x()
             val aby = b.y() - a.y()
             val abz = b.z() - a.z()
-            val bcx = c.x() - b.x()
-            val bcy = c.y() - b.y()
-            val bcz = c.z() - b.z()
+            val bcx = b.x() - c.x()
+            val bcy = b.y() - c.y()
+            val bcz = b.z() - c.z()
             return abx * bcx + aby * bcy + abz * bcz
         }
         fun angleBetweenPoints(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
