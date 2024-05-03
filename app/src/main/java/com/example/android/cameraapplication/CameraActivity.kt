@@ -2,9 +2,19 @@ package com.example.android.cameraapplication
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import android.util.Log
+import android.widget.TextView
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.Camera
@@ -20,6 +30,7 @@ import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
 
 var numReps: Int = 0
 var numSeries: Int = 0
@@ -45,6 +56,29 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     /** Blocking ML operations are performed using this executor */
     private lateinit var backgroundExecutor: ExecutorService
 
+    private var messageReceiver : MessageReceiver? = null
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            val binder = service as SmartwatchConnector.ActivityBinder
+            binder.getService().setActivityContext(this@CameraActivity)
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            Log.i("", "Disconnected from smatwatch")
+        }
+    }
+
+    inner class MessageReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            println("Entro nella ricezione lato applicazione")
+            val message = intent.getIntExtra("com.example.android.cameraapplication.BPM", 0)
+            println("Dati ricevuti lato applicazione, valore $message")
+            findViewById<TextView>(R.id.bpmTV).text = message.toString()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         //Log.d(TAG, "DebugMess: ")
         super.onCreate(savedInstanceState)
@@ -56,6 +90,14 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
         requestCameraPermissions()
+
+        messageReceiver = MessageReceiver()
+        val serviceIntent = Intent(this, SmartwatchConnector::class.java)
+        startService(serviceIntent)
+        bindService(serviceIntent, serviceConnection, Context.RECEIVER_NOT_EXPORTED)
+        registerReceiver(messageReceiver, IntentFilter("android.intent.action.BPM_UPDATE"),
+            RECEIVER_NOT_EXPORTED)
+
         previewView = findViewById<PreviewView>(R.id.previewView)
         setUpCamera()
         backgroundExecutor = Executors.newSingleThreadExecutor()
@@ -149,9 +191,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     override fun onResults(
         resultBundle: PoseLandmarkerHelper.ResultBundle
     ) {
-
-
-        println("Entro nella funzione")
         resultBundle.results[0]?.let { poseLandmarkerResult ->
             for(landmark in poseLandmarkerResult.landmarks()) {
                 for (normalizedLandmark in landmark) {
@@ -212,6 +251,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             )
         }
     }
+
     //QUESTO è PRESO DAL CODICE DI DENNY
     override fun onRequestPermissionsResult(
         requestCode: Int,
