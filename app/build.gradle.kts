@@ -1,7 +1,11 @@
+import com.android.build.api.dsl.Packaging
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
+
 
 android {
     namespace = "com.example.android.cameraapplication"
@@ -33,10 +37,19 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    packaging{
+        resources.excludes.add("META-INF/*")
+    }
 }
+
+val ktorVersion: String by project
 
 dependencies {
 
+    implementation("io.ktor:ktor-server-netty:1.4.0")
+    implementation("io.ktor:ktor:1.4.0")
+    implementation("io.ktor:ktor-gson:1.4.0")
     implementation ("androidx.camera:camera-camera2:1.3.2")
     implementation ("androidx.camera:camera-lifecycle:1.3.2")
     implementation ("androidx.camera:camera-view:1.3.2")
