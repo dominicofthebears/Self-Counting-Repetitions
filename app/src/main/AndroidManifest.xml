@@ -8,7 +8,7 @@
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission
-            android:name="android.permission.CAMERA" 
+            android:name="android.permission.CAMERA"
             tools:ignore="PermissionImpliesUnsupportedChromeOsHardware"/>
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
