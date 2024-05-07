@@ -52,7 +52,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
     //QUESTO è PRESO DAL CODICE DI DENNY
     private lateinit var previewView : PreviewView
 
@@ -61,7 +61,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     private var messageReceiver : MessageReceiver? = null
 
-    private val serviceConnection = object : ServiceConnection {
+   /* private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as SmartwatchConnector.ActivityBinder
             binder.getService().setActivityContext(this@CameraActivity)
@@ -70,7 +70,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         override fun onServiceDisconnected(name: ComponentName?) {
             Log.i("", "Disconnected from smatwatch")
         }
-    }
+    }*/
 
     inner class MessageReceiver : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -94,12 +94,14 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
         requestCameraPermissions()
 
+        /*
         messageReceiver = MessageReceiver()
         val serviceIntent = Intent(this, SmartwatchConnector::class.java)
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.RECEIVER_NOT_EXPORTED)
         registerReceiver(messageReceiver, IntentFilter("android.intent.action.BPM_UPDATE"),
             RECEIVER_NOT_EXPORTED)
+                    */
 
         previewView = findViewById<PreviewView>(R.id.previewView)
         setUpCamera()
@@ -202,7 +204,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                     if(ExerciseManager.isExerciseInProgress){
                         val phase = ExerciseManager.checkSquatPhase()
                         ExerciseManager.updateRepCount(phase)
-                        println(ExerciseManager.repCount)
+                        println("repCount = " + ExerciseManager.repCount)
 
                         //ExerciseManager.checkForm()
                     }else {
@@ -297,6 +299,7 @@ class ExerciseManager {
         private lateinit var currentLandmark: List<NormalizedLandmark>
         private var proximityThreshold: Float = 0.0f
         private var exerciseState = 0
+        private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)-------------------------------
 
         private const val G30 = 0.523
         private const val G45 = 0.785f
@@ -304,7 +307,8 @@ class ExerciseManager {
         private const val G90 = 1.570f
         private const val G120 = 2.094f
         private const val G150 = 2.618f
-        private const val G180 = 3.141f
+        private const val G160 = 2.792f
+        private const val G170 = 2.967f
 
         fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
             currentLandmark = landmark
@@ -322,17 +326,36 @@ class ExerciseManager {
         }
 
         fun checkSquatPhase(): Int {
+            //angle between hip, knee and foot
             val angle = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+
+            // ROBA MIA
+            val angleKnee = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(28), currentLandmark.get(32))
+            val shouldersDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12)) // distance between shoulders
+            val feetDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             var phase = 0
             when {
-                angle > G150 -> phase = 0
-                (angle > G90) and (angle <= G150) -> phase = 1
-                (angle > G60) and (angle <= G90) -> phase = 2
-                (angle <= G60) -> phase = 3
+                angle > G160 -> phase = 0
+                (angle > G120) and (angle <= G160) -> phase = 1
+                (angle > G90) and (angle <= G120) -> phase = 2
+                (angle > G60) and (angle <= G90) -> phase = 3
+            }
+
+            //println("phase = " + phase)
+            //println("feetDistance = " + feetDistance)
+            //println("shoulderDistance = " + shouldersDistance)
+            if (shouldersDistance !in (feetDistance - feetDistance/4)..(feetDistance + feetDistance/4))
+            {
+                //TODO salva la tripletta per la parte di form assesment
+                repsPerformedWrong.add(Triple(69, repCount, "knees too far apart from shoulders"))
+                //println("Esercizio fatto scorrettamente")
+                Log.d("Form Assessment", "Bad exercise posture")
+                //println(repsPerformedWrong)
             }
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
+            println(exerciseState)
             when {
                 (exerciseState == 0) and (phase == 1) -> exerciseState++
                 (exerciseState == 1) and (phase == 2) -> exerciseState++
