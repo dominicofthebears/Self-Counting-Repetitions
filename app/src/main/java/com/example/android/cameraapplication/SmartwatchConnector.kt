@@ -68,11 +68,8 @@ class SmartwatchConnector: Service() {
     /* Mandatory Client Characteristic Config Descriptor */
     private val CLIENT_CONFIG: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
     private val heartRateData = byteArrayOf(0, 99)
-    private var heartBeat = false
     private val BLUETOOTH_PERMISSION_GRANTED = 2
     private var mainActivity: Activity? = null
-    private var mainContext: Context? = null
-    private var broadcastSender: LocalBroadcastManager? = null
 
 
     /**
@@ -276,8 +273,8 @@ class SmartwatchConnector: Service() {
             startServer()
         }
 
-        val intent = Intent(this, CameraActivity::class.java)
-        intent.action = "android.intent.action.BPM_UPDATE"
+        val intent = Intent(this, CameraActivity.MessageReceiver::class.java)
+        intent.setAction("android.intent.action.BPM_UPDATE")
 
         embeddedServer(Netty, 12345) {
             install(StatusPages) {
@@ -407,7 +404,8 @@ class SmartwatchConnector: Service() {
 
     private fun sendDataToActivity(bpm: Int, intent: Intent) {
         intent.putExtra("com.example.android.cameraapplication.BPM", bpm)
-        println(LocalBroadcastManager.getInstance(this).sendBroadcast(intent))
+        LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
     }
 
     override fun onBind(intent: Intent?): Binder {
@@ -421,7 +419,6 @@ class SmartwatchConnector: Service() {
     }
 
     fun setActivityContext(context:Context) {
-        this.mainContext = context
         this.mainActivity = context as Activity
     }
 
