@@ -26,18 +26,21 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 
-var numReps: Int = 0
-var numSeries: Int = 0
-var restTimeMinutes: Int = 0
-var restTimeSeconds: Int = 0
+
 
 class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListener {
+
+    var numReps: Int = 0
+    var numSeries: Int = 0
+    var restTimeMinutes: Int = 0
+    var restTimeSeconds: Int = 0
     companion object {
         //QUESTO è PRESO DAL CODICE DI DENNY
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
@@ -65,17 +68,17 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            Log.i("", "Disconnected from smatwatch")
+            Log.i("", "Disconnected from smatwatch service")
         }
     }
 
-    inner class MessageReceiver : BroadcastReceiver() {
+    inner class MessageReceiver: BroadcastReceiver() {
+
         override fun onReceive(context: Context, intent: Intent) {
-            println("Entro nella ricezione lato applicazione")
             val message = intent.getIntExtra("com.example.android.cameraapplication.BPM", 0)
-            println("Dati ricevuti lato applicazione, valore $message")
             findViewById<TextView>(R.id.bpmTV).text = message.toString()
         }
+
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -89,14 +92,17 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         restTimeMinutes = intent.getIntExtra("restSeconds", 0)
         restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
+        findViewById<TextView>(R.id.repTV).text = java.lang.String("0/$numReps")
+        findViewById<TextView>(R.id.seriesTV).text = java.lang.String("1/$numSeries")
+
         requestCameraPermissions()
 
         messageReceiver = MessageReceiver()
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver!!, IntentFilter("android.intent.action.BPM_UPDATE"))
         val serviceIntent = Intent(this, SmartwatchConnector::class.java)
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.RECEIVER_NOT_EXPORTED)
-        registerReceiver(messageReceiver, IntentFilter("android.intent.action.BPM_UPDATE"),
-            RECEIVER_NOT_EXPORTED)
+
 
         previewView = findViewById<PreviewView>(R.id.previewView)
         setUpCamera()
@@ -266,4 +272,5 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             }
         }
     }
+
 }
