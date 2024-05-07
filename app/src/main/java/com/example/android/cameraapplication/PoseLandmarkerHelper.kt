@@ -81,7 +81,7 @@ class PoseLandmarkerHelper(
             }
         }
 
-        val modelName = "pose_landmarker_lite.task"
+        val modelName = "pose_landmarker_full.task"
         /*
         val modelName =
             when (currentModel) {
