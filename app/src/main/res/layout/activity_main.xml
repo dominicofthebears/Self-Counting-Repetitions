@@ -54,7 +54,8 @@
             app:layout_constraintEnd_toEndOf="parent"
 
             app:layout_constraintTop_toTopOf="@+id/textView5"
-            android:layout_marginTop="5dp" />
+            android:layout_marginTop="5dp"
+            android:textSize="15sp" />
 
     <EditText
             android:layout_width="93dp"
@@ -65,7 +66,8 @@
             android:layout_marginEnd="56dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@id/textView4"
-            android:layout_marginTop="5dp" />
+            android:layout_marginTop="5dp"
+            android:textSize="15sp" />
 
     <EditText
             android:layout_width="93dp"
@@ -76,7 +78,8 @@
             android:layout_marginEnd="56dp"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/textView7"
-            android:layout_marginTop="5dp" />
+            android:layout_marginTop="5dp"
+            android:textSize="15sp" />
 
     <TextView
             android:text="Number of repetitions"
