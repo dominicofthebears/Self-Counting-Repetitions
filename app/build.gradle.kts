@@ -47,6 +47,8 @@ val ktorVersion: String by project
 
 dependencies {
 
+
+    implementation("androidx.fragment:fragment-ktx:1.7.0")
     implementation("io.ktor:ktor-server-netty:1.4.0")
     implementation("io.ktor:ktor:1.4.0")
     implementation("io.ktor:ktor-gson:1.4.0")
