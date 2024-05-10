@@ -54,6 +54,8 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     var restTimeMinutes: Int = 0
     var restTimeSeconds: Int = 0
     var end: Boolean = false
+    var starting: Boolean = true
+
     companion object {
         //QUESTO è PRESO DAL CODICE DI DENNY
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
@@ -104,6 +106,11 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         //Log.d(TAG, "DebugMess: ")
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
+
+        starting = true
+        ExerciseManager.timerGoing=false
+        ExerciseManager.isExerciseInProgress=false
+        end = false
 
         numReps = intent.getIntExtra("numReps", 0)
         numSeries = intent.getIntExtra("numSets", 0)
@@ -172,6 +179,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         timer.cancel()
                         runOnUiThread{findViewById<PreviewView>(R.id.previewView).visibility = View.VISIBLE}
                         ExerciseManager.timerGoing=false
+                        starting = false
                     }
                 }
             }
@@ -261,10 +269,10 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         ExerciseManager.updateRepCount(phase)
                         findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps" //update rep count
                         if(ExerciseManager.repCount == numReps){ //new series
+                            ExerciseManager.repCount = 0
                             var newSeries = findViewById<TextView>(R.id.seriesTV).text.split("/")[0].toInt()
                             newSeries++
                             if(newSeries <= numSeries) { //launching of the timer for the rest time
-                                ExerciseManager.repCount = 0
                                 findViewById<TextView>(R.id.seriesTV).text=newSeries.toString() + "/$numSeries"
                                 findViewById<TextView>(R.id.repTV).text="0/$numReps"
                                 ExerciseManager.timerGoing = true
@@ -275,6 +283,8 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                 startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
                             }
                             else{
+                                end = true
+                                ExerciseManager.isExerciseInProgress=false
                                 runOnUiThread{
                                     cameraProvider?.unbindAll()
                                     backgroundExecutor.shutdownNow()
@@ -308,7 +318,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     }
 
     private fun changeFlags(): Boolean {
-        if (end) {
+        if (end || starting) {
             return false
         }
         if (!ExerciseManager.timerGoing) { //timer is ended
@@ -352,7 +362,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
 class ExerciseManager {
     companion object {
-        var timerGoing: Boolean = true
+        var timerGoing: Boolean = false
         var isExerciseInProgress: Boolean = false
         var repCount: Int = 0
 
