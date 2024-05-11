@@ -36,7 +36,7 @@ class PoseLandmarkerHelper(
     var minPoseDetectionConfidence: Float = DEFAULT_POSE_DETECTION_CONFIDENCE,
     var minPoseTrackingConfidence: Float = DEFAULT_POSE_TRACKING_CONFIDENCE,
     var minPosePresenceConfidence: Float = DEFAULT_POSE_PRESENCE_CONFIDENCE,
-    var currentModel: Int = MODEL_POSE_LANDMARKER_FULL,
+    //var currentModel: Int = MODEL_POSE_LANDMARKER_HEAVY,
     var currentDelegate: Int = DELEGATE_CPU,
     var runningMode: RunningMode = RunningMode.IMAGE,
     val context: Context,
@@ -82,15 +82,6 @@ class PoseLandmarkerHelper(
         }
 
         val modelName = "pose_landmarker_full.task"
-        /*
-        val modelName =
-            when (currentModel) {
-                MODEL_POSE_LANDMARKER_FULL -> "pose_landmarker_full.task"
-                MODEL_POSE_LANDMARKER_LITE -> "pose_landmarker_lite.task"
-                MODEL_POSE_LANDMARKER_HEAVY -> "pose_landmarker_heavy.task"
-                else -> "pose_landmarker_full.task"
-            }
-         */
 
         baseOptionBuilder.setModelAssetPath(modelName)
 

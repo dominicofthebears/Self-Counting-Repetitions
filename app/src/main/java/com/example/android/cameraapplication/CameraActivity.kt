@@ -52,7 +52,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
     //QUESTO è PRESO DAL CODICE DI DENNY
     private lateinit var previewView : PreviewView
 
@@ -204,7 +204,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                     if(ExerciseManager.isExerciseInProgress){
                         val phase = ExerciseManager.checkSquatPhase()
                         ExerciseManager.updateRepCount(phase)
-                        //println("repCount = " + ExerciseManager.repCount)
+                        println("repCount = " + ExerciseManager.repCount)
 
                         //ExerciseManager.checkForm()
                     }else {
@@ -310,9 +310,11 @@ class ExerciseManager {
         private const val G35 = 0.610f
         private const val G45 = 0.785f
         private const val G60 = 1.047f
+        private const val G70 = 1.221f
         private const val G80 = 1.396f
         private const val G90 = 1.570f
         private const val G120 = 2.094f
+        private const val G130 = 2.268f
         private const val G150 = 2.618f
         private const val G160 = 2.792f
         private const val G170 = 2.967f
@@ -338,73 +340,65 @@ class ExerciseManager {
 
             // ROBA MIA
             val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
-            val shouldersDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12)) // distance between shoulders
+            val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
             val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             var phase = 0
             when {
-                angleKnee > G160 -> phase = 0
-                (angleKnee > G120) and (angleKnee <= G160) -> {
+                angleKnee > G120 -> {
+                    phase = 0
+                    if (angleHip < G130) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP " + phase)
+                    }
+                    if (kneeDistance < (ankleDistance*1.5))// or kneeDistance > ankleDistance*5)
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                    }
+                }
+                (angleKnee > G60) and (angleKnee <= G130) -> {
                     phase = 1
-                    if (angleHip < G90) {
+                    if (angleHip <= G30) {
                         repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
                         insertTriplet(Triple(100, repCount, hipComment + phase))
-                        Log.d(FORM_TAG, "HIP 1")
+                        Log.d(FORM_TAG, "HIP " + phase)
                     }
-                    if ((shouldersDistance > (kneeDistance - kneeDistance/3))) //or (
-                               // kneeDistance > (shouldersDistance + shouldersDistance/3)))
+                    if (kneeDistance > (ankleDistance*2.5))
                     {
                         repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
                         insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER 1")
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                     }
                 }
-                (angleKnee > G90) and (angleKnee <= G120) -> {
+                (angleKnee <= G60) -> {
                     phase = 2
-                    if ((angleHip > G90) or (angleHip < G35)) {
-                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
-                        insertTriplet(Triple(100, repCount, hipComment + phase))
-                        Log.d(FORM_TAG, "HIP 2")
-                    }
-                    if (kneeDistance > (shouldersDistance + shouldersDistance/2))
+                    if (kneeDistance > (ankleDistance*3.5))
                     {
                         repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
                         insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER 2")
-                    }
-                }
-                (angleKnee > G60) and (angleKnee <= G90) -> {
-                    phase = 3
-                    if (angleHip <= G35) {
-                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
-                        insertTriplet(Triple(100, repCount, hipComment + phase))
-                        Log.d(FORM_TAG, "HIP 3")
-                    }
-                    if (kneeDistance > (shouldersDistance + shouldersDistance/2))
-                    {
-                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
-                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER 3")
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                     }
                 }
             }
 
-            println("grado dell' HIP = " + (angleHip*57.958).toInt())
+            //println("grado dell' HIP = " + (angleHip*57.958).toInt())
             //println("grado dell' KNEE = " + (angleKnee*57.958).toInt())
-            //println("phase = " + phase)
-            //println("KNEE = " + kneeDistance)
-            //println("SHOULDER = " + shouldersDistance)
+            println("phase = " + phase)
+            println("KNEE = " + kneeDistance)
+            println("ANKLE = " + ankleDistance)
             //println(repsDictionary)
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
             //println("exerciseState = " + exerciseState)
             when {
-                (exerciseState == 0) and (phase == 1) -> exerciseState++
-                (exerciseState == 1) and (phase == 2) -> exerciseState++
-                (exerciseState == 2) and (phase == 3) -> exerciseState++
-                (exerciseState == 3) and (phase == 2) -> exerciseState++
-                (exerciseState == 4) and (phase == 1) -> exerciseState++
-                (exerciseState == 5) and (phase == 0) -> {
+                (exerciseState == 0) and (phase == 0) -> exerciseState++
+                (exerciseState == 1) and (phase == 1) -> exerciseState++
+                (exerciseState == 2) and (phase == 2) -> exerciseState++
+                (exerciseState == 3) and (phase == 1) -> exerciseState++
+                (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
                     repCount++
                     return true
