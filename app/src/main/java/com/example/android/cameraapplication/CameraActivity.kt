@@ -52,7 +52,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_BACK
+    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
     //QUESTO è PRESO DAL CODICE DI DENNY
     private lateinit var previewView : PreviewView
 
@@ -204,7 +204,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                     if(ExerciseManager.isExerciseInProgress){
                         val phase = ExerciseManager.checkSquatPhase()
                         ExerciseManager.updateRepCount(phase)
-                        println("repCount = " + ExerciseManager.repCount)
+                        //println("repCount = " + ExerciseManager.repCount)
 
                         //ExerciseManager.checkForm()
                     }else {
@@ -295,15 +295,22 @@ class ExerciseManager {
     companion object {
         var isExerciseInProgress: Boolean = true
         var repCount: Int = 0
+        private val FORM_TAG = "Form Assessment"
+        private val hipComment = "hip not correct in phase "
+        private val kneeShoulderComment = "knees too far apart from shoulders in phase "
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
         private var proximityThreshold: Float = 0.0f
         private var exerciseState = 0
-        private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)-------------------------------
+        private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)
+        private val repsDictionary = mutableMapOf<Triple<Int, Int, String>, Int>()
 
-        private const val G30 = 0.523
+        private const val G25 = 0.500f
+        private const val G30 = 0.523f
+        private const val G35 = 0.610f
         private const val G45 = 0.785f
         private const val G60 = 1.047f
+        private const val G80 = 1.396f
         private const val G90 = 1.570f
         private const val G120 = 2.094f
         private const val G150 = 2.618f
@@ -327,35 +334,70 @@ class ExerciseManager {
 
         fun checkSquatPhase(): Int {
             //angle between hip, knee and foot
-            val angle = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+            val angleKnee = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
 
             // ROBA MIA
-            val angleKnee = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(28), currentLandmark.get(32))
+            val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
             val shouldersDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12)) // distance between shoulders
-            val feetDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
+            val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             var phase = 0
             when {
-                angle > G160 -> phase = 0
-                (angle > G120) and (angle <= G160) -> phase = 1
-                (angle > G90) and (angle <= G120) -> phase = 2
-                (angle > G60) and (angle <= G90) -> phase = 3
+                angleKnee > G160 -> phase = 0
+                (angleKnee > G120) and (angleKnee <= G160) -> {
+                    phase = 1
+                    if (angleHip < G90) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP 1")
+                    }
+                    if ((shouldersDistance > (kneeDistance - kneeDistance/3))) //or (
+                               // kneeDistance > (shouldersDistance + shouldersDistance/3)))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER 1")
+                    }
+                }
+                (angleKnee > G90) and (angleKnee <= G120) -> {
+                    phase = 2
+                    if ((angleHip > G90) or (angleHip < G35)) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP 2")
+                    }
+                    if (kneeDistance > (shouldersDistance + shouldersDistance/2))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER 2")
+                    }
+                }
+                (angleKnee > G60) and (angleKnee <= G90) -> {
+                    phase = 3
+                    if (angleHip <= G35) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP 3")
+                    }
+                    if (kneeDistance > (shouldersDistance + shouldersDistance/2))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER 3")
+                    }
+                }
             }
 
+            println("grado dell' HIP = " + (angleHip*57.958).toInt())
+            //println("grado dell' KNEE = " + (angleKnee*57.958).toInt())
             //println("phase = " + phase)
-            //println("feetDistance = " + feetDistance)
-            //println("shoulderDistance = " + shouldersDistance)
-            if (shouldersDistance !in (feetDistance - feetDistance/4)..(feetDistance + feetDistance/4))
-            {
-                //TODO salva la tripletta per la parte di form assesment
-                repsPerformedWrong.add(Triple(69, repCount, "knees too far apart from shoulders"))
-                //println("Esercizio fatto scorrettamente")
-                Log.d("Form Assessment", "Bad exercise posture")
-                //println(repsPerformedWrong)
-            }
+            //println("KNEE = " + kneeDistance)
+            //println("SHOULDER = " + shouldersDistance)
+            //println(repsDictionary)
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
-            println(exerciseState)
+            //println("exerciseState = " + exerciseState)
             when {
                 (exerciseState == 0) and (phase == 1) -> exerciseState++
                 (exerciseState == 1) and (phase == 2) -> exerciseState++
@@ -370,6 +412,14 @@ class ExerciseManager {
             }
             return false
         }
+
+        fun insertTriplet(key: Triple<Int, Int, String>) {
+            if (repsDictionary.containsKey(key))
+                repsDictionary[key] = repsDictionary.getValue(key) + 1
+            else
+                repsDictionary[key] = 1
+        }
+
         fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
             val dx = a.x() - b.x()
             val dy = a.y() - b.y()
