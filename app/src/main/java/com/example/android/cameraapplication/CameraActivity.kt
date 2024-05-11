@@ -342,6 +342,7 @@ class ExerciseManager {
             val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
             val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
             val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
+            //val DioBonoDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12))
             var phase = 0
             when {
                 angleKnee > G120 -> {
@@ -351,7 +352,7 @@ class ExerciseManager {
                         insertTriplet(Triple(100, repCount, hipComment + phase))
                         Log.d(FORM_TAG, "HIP " + phase)
                     }
-                    if (kneeDistance < (ankleDistance*1.5))// or kneeDistance > ankleDistance*5)
+                    if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
                     {
                         repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
                         insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
@@ -374,7 +375,7 @@ class ExerciseManager {
                 }
                 (angleKnee <= G60) -> {
                     phase = 2
-                    if (kneeDistance > (ankleDistance*3.5))
+                    if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
                     {
                         repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
                         insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
@@ -385,10 +386,11 @@ class ExerciseManager {
 
             //println("grado dell' HIP = " + (angleHip*57.958).toInt())
             //println("grado dell' KNEE = " + (angleKnee*57.958).toInt())
-            println("phase = " + phase)
-            println("KNEE = " + kneeDistance)
-            println("ANKLE = " + ankleDistance)
+            //println("phase = " + phase)
+            //println("KNEE = " + kneeDistance)
+            //println("ANKLE = " + ankleDistance)
             //println(repsDictionary)
+            //println("DAIIIIII = " + DioBonoDistance)
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
