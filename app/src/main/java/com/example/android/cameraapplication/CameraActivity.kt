@@ -301,9 +301,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                     add<ResultFragment>(R.id.fragment_container_view)
                                     setReorderingAllowed(true)
                                 }
-
-
-
                             }
                         }
                     }else {
