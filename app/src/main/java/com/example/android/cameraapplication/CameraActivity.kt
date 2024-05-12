@@ -9,10 +9,15 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -26,21 +31,31 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.add
+import androidx.fragment.app.commit
+import androidx.fragment.app.replace
+import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import java.util.Timer
+import java.util.TimerTask
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.acos
 import kotlin.math.sqrt
 
 
-var numReps: Int = 0
-var numSeries: Int = 0
-var restTimeMinutes: Int = 0
-var restTimeSeconds: Int = 0
-
 class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListener {
+
+    var numReps: Int = 0
+    var numSeries: Int = 0
+    var restTimeMinutes: Int = 0
+    var restTimeSeconds: Int = 0
+    var end: Boolean = false
+    var starting: Boolean = true
+
     companion object {
         //QUESTO è PRESO DAL CODICE DI DENNY
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
@@ -61,25 +76,30 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     private var messageReceiver : MessageReceiver? = null
 
-   /* private val serviceConnection = object : ServiceConnection {
+    private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as SmartwatchConnector.ActivityBinder
             binder.getService().setActivityContext(this@CameraActivity)
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            Log.i("", "Disconnected from smatwatch")
-        }
-    }*/
-
-    inner class MessageReceiver : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            println("Entro nella ricezione lato applicazione")
-            val message = intent.getIntExtra("com.example.android.cameraapplication.BPM", 0)
-            println("Dati ricevuti lato applicazione, valore $message")
-            findViewById<TextView>(R.id.bpmTV).text = message.toString()
+            Log.i("", "Disconnected from smatwatch service")
         }
     }
+
+    inner class MessageReceiver: BroadcastReceiver() {
+
+        override fun onReceive(context: Context, intent: Intent) {
+            val message = intent.getIntExtra("com.example.android.cameraapplication.BPM", 0)
+            findViewById<TextView>(R.id.bpmTV).text = message.toString()
+        }
+
+    }
+
+
+
+
+
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,21 +107,27 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
 
+        starting = true
+        ExerciseManager.timerGoing=false
+        ExerciseManager.isExerciseInProgress=false
+        end = false
+
         numReps = intent.getIntExtra("numReps", 0)
         numSeries = intent.getIntExtra("numSets", 0)
         restTimeMinutes = intent.getIntExtra("restSeconds", 0)
         restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
+        findViewById<TextView>(R.id.repTV).text = java.lang.String("0/$numReps")
+        findViewById<TextView>(R.id.seriesTV).text = java.lang.String("1/$numSeries")
+
         requestCameraPermissions()
 
-        /*
         messageReceiver = MessageReceiver()
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver!!, IntentFilter("android.intent.action.BPM_UPDATE"))
         val serviceIntent = Intent(this, SmartwatchConnector::class.java)
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.RECEIVER_NOT_EXPORTED)
-        registerReceiver(messageReceiver, IntentFilter("android.intent.action.BPM_UPDATE"),
-            RECEIVER_NOT_EXPORTED)
-                    */
+
 
         previewView = findViewById<PreviewView>(R.id.previewView)
         setUpCamera()
@@ -122,6 +148,44 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                 currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
                 poseLandmarkerHelperListener = this
             )
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun startTimer(num: Int, flag: Boolean){
+        findViewById<PreviewView>(R.id.previewView).visibility = View.INVISIBLE
+        var count = 0
+        val timeView = findViewById<TextView>(R.id.timerView)
+
+        if (flag)
+            timeView.text= num.toString()
+        else
+            timeView.text=((num/60).toString()+":"+(num%60).toString())
+        val timer = Timer()
+        var newTime = num
+        try{
+            val timerTask = object : TimerTask(){
+                override fun run() {
+                    newTime--
+                    if (flag)
+                        timeView.text = newTime.toString()
+                    else
+                        if(newTime%60<10)
+                            timeView.text=((newTime/60).toString()+":0"+(newTime%60).toString())
+                        else
+                            timeView.text=((newTime/60).toString()+":"+(newTime%60).toString())
+                    count++
+                    if(count==num){
+                        timer.cancel()
+                        runOnUiThread{findViewById<PreviewView>(R.id.previewView).visibility = View.VISIBLE}
+                        ExerciseManager.timerGoing=false
+                        starting = false
+                    }
+                }
+            }
+            timer.schedule(timerTask, 1000, 1000)
+        }catch (e: Exception){
+            e.printStackTrace()
         }
     }
     private fun setUpCamera() {
@@ -152,8 +216,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
             //.setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
             .build()
-        //Log.d(TAG, "DebugMess: ")
-        // ImageAnalysis. Using RGBA 8888 to match how our models work
+        startTimer(3, true) //initial timer, 3 seconds
         imageAnalyzer =
             ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 //.setTargetRotation(fragmentCameraBinding.viewFinder.display.rotation)
@@ -166,7 +229,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         detectPose(image)
                     }
                 }
-
         // Must unbind the use-cases before rebinding them
         cameraProvider.unbindAll()
 
@@ -193,6 +255,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             )
         }
     }
+    @SuppressLint("CutPasteId")
     override fun onResults(
         resultBundle: PoseLandmarkerHelper.ResultBundle
     ) {
@@ -205,59 +268,65 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         val phase = ExerciseManager.checkSquatPhase()
                         ExerciseManager.updateRepCount(phase)
                         println("repCount = " + ExerciseManager.repCount)
+                        findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps" //update rep count
+                        if(ExerciseManager.repCount == numReps){ //new series
+                            ExerciseManager.repCount = 0
+                            var newSeries = findViewById<TextView>(R.id.seriesTV).text.split("/")[0].toInt()
+                            newSeries++
+                            if(newSeries <= numSeries) { //launching of the timer for the rest time
+                                findViewById<TextView>(R.id.seriesTV).text=newSeries.toString() + "/$numSeries"
+                                findViewById<TextView>(R.id.repTV).text="0/$numReps"
+                                ExerciseManager.timerGoing = true
+                                ExerciseManager.isExerciseInProgress = false
+                                runOnUiThread {
+                                    findViewById<TextView>(R.id.timerView).visibility = View.VISIBLE
+                                }
+                                startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
+                            }
+                            else{
+                                end = true
+                                ExerciseManager.isExerciseInProgress=false
+                                runOnUiThread{
+                                    cameraProvider?.unbindAll()
+                                    backgroundExecutor.shutdownNow()
+                                }
+                                unbindService(serviceConnection)
+                                messageReceiver?.let {
+                                    LocalBroadcastManager.getInstance(this).unregisterReceiver(
+                                        it
+                                    )
+                                }
 
-                        //ExerciseManager.checkForm()
+                                supportFragmentManager.commit {
+                                    add<ResultFragment>(R.id.fragment_container_view)
+                                    setReorderingAllowed(true)
+                                }
+
+
+
+                            }
+                        }
                     }else {
-                        println("Exercise NOT in Progress")
-                        if (ExerciseManager.checkStart()) ExerciseManager.isExerciseInProgress = true
+                        changeFlags()
                     }
-
-
-                /*for (normalizedLandmark in landmark) {
-                        println(normalizedLandmark.x().toString() + " " + normalizedLandmark.y().toString() + "\n")
-                }
-                println("End of landmarks")
-                */
             }
         }
 
-
-
-        /*
-        activity?.runOnUiThread {
-            if (_fragmentCameraBinding != null) {
-                fragmentCameraBinding.bottomSheetLayout.inferenceTimeVal.text =
-                    String.format("%d ms", resultBundle.inferenceTime)
-
-                // Pass necessary information to OverlayView for drawing on the canvas
-                fragmentCameraBinding.overlay.setResults(
-                    resultBundle.results.first(),
-                    resultBundle.inputImageHeight,
-                    resultBundle.inputImageWidth,
-                    RunningMode.LIVE_STREAM
-                )
-
-                // Force a redraw
-                fragmentCameraBinding.overlay.invalidate()
-            }
-        }
-
-         */
     }
 
     override fun onError(error: String, errorCode: Int) {
         Log.d(TAG, "onError")
-        /*
-        activity?.runOnUiThread {
-            Toast.makeText(requireContext(), error, Toast.LENGTH_SHORT).show()
-            if (errorCode == PoseLandmarkerHelper.GPU_ERROR) {
-                fragmentCameraBinding.bottomSheetLayout.spinnerDelegate.setSelection(
-                    PoseLandmarkerHelper.DELEGATE_CPU, false
-                )
-            }
-        }
+    }
 
-         */
+    private fun changeFlags(): Boolean {
+        if (end || starting) {
+            return false
+        }
+        if (!ExerciseManager.timerGoing) { //timer is ended
+            ExerciseManager.isExerciseInProgress = true
+            runOnUiThread { findViewById<TextView>(R.id.timerView).visibility=View.INVISIBLE }
+        }
+        return ExerciseManager.isExerciseInProgress
     }
     //QUESTO è PRESO DAL CODICE DI DENNY
     private fun requestCameraPermissions() {
@@ -288,12 +357,14 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             }
         }
     }
+
 }
 
 
 class ExerciseManager {
     companion object {
-        var isExerciseInProgress: Boolean = true
+        var timerGoing: Boolean = false
+        var isExerciseInProgress: Boolean = false
         var repCount: Int = 0
         private val FORM_TAG = "Form Assessment"
         private val hipComment = "hip not correct in phase "
