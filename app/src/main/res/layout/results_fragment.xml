@@ -7,7 +7,7 @@
 
     <ScrollView
             android:layout_width="414dp"
-            android:layout_height="731dp"
+            android:layout_height="725dp"
             android:id="@+id/scrollView2"
             android:visibility="visible"
             tools:visibility="visible"
@@ -22,7 +22,13 @@
                 android:orientation="vertical"
                 tools:layout_editor_absoluteY="0dp"
                 tools:layout_editor_absoluteX="-2dp"
-                android:id="@+id/linearLayout"/>
+                android:id="@+id/linearLayout">
+
+            <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="32dp"
+                    android:id="@+id/averageBPM" />
+        </LinearLayout>
     </ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
