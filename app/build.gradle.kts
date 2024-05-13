@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.Packaging
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -46,6 +44,7 @@ android {
 val ktorVersion: String by project
 
 dependencies {
+
 
     implementation ("com.google.android.material:material:1.2.1")
     implementation("androidx.fragment:fragment-ktx:1.7.0")
