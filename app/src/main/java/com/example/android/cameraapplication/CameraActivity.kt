@@ -1,7 +1,10 @@
 package com.example.android.cameraapplication
 
 import android.Manifest
+import android.Manifest.permission.BLUETOOTH_CONNECT
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -9,16 +12,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
@@ -31,14 +32,13 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
-import androidx.fragment.app.replace
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 import com.google.mediapipe.tasks.vision.core.RunningMode
+import io.netty.util.internal.ObjectUtil.intValue
 import java.util.Timer
 import java.util.TimerTask
 import java.util.concurrent.ExecutorService
@@ -55,10 +55,12 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     var restTimeSeconds: Int = 0
     var end: Boolean = false
     companion object {
-        //QUESTO è PRESO DAL CODICE DI DENNY
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
+        private const val BLUETOOTH_PERMISSION_REQUEST_CODE = 1000
         private const val TAG = "Pose Landmarker"
     }
+
+
     private lateinit var poseLandmarkerHelper: PoseLandmarkerHelper
     //private val viewModel: MainViewModel by activityViewModels()
     private var preview: Preview? = null
@@ -87,21 +89,27 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     inner class MessageReceiver: BroadcastReceiver() {
 
+        var accumulator: Int = 0
+            get() = field
+        var numElements: Int = 0
+            get() = field
+
         override fun onReceive(context: Context, intent: Intent) {
             val message = intent.getIntExtra("com.example.android.cameraapplication.BPM", 0)
             findViewById<TextView>(R.id.bpmTV).text = message.toString()
+            accumulator += message
+            numElements += 1
         }
 
     }
 
-
-
-
-
-
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
-        //Log.d(TAG, "DebugMess: ")
+        requestCameraPermissions()
+        startBluetooth()
+
+        ExerciseManager.isExerciseInProgress = false
+        ExerciseManager.timerGoing = false
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
 
@@ -113,7 +121,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         findViewById<TextView>(R.id.repTV).text = java.lang.String("0/$numReps")
         findViewById<TextView>(R.id.seriesTV).text = java.lang.String("1/$numSeries")
 
-        requestCameraPermissions()
+
 
         messageReceiver = MessageReceiver()
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver!!, IntentFilter("android.intent.action.BPM_UPDATE"))
@@ -146,6 +154,9 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     @SuppressLint("SetTextI18n")
     private fun startTimer(num: Int, flag: Boolean){
+        println("Entro nella start timer")
+        ExerciseManager.timerGoing = true
+        ExerciseManager.isExerciseInProgress = false
         findViewById<PreviewView>(R.id.previewView).visibility = View.INVISIBLE
         var count = 0
         val timeView = findViewById<TextView>(R.id.timerView)
@@ -172,9 +183,11 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         timer.cancel()
                         runOnUiThread{findViewById<PreviewView>(R.id.previewView).visibility = View.VISIBLE}
                         ExerciseManager.timerGoing=false
+                        println("cambia timerGoing a false")
                     }
                 }
             }
+
             timer.schedule(timerTask, 1000, 1000)
         }catch (e: Exception){
             e.printStackTrace()
@@ -182,7 +195,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     }
     private fun setUpCamera() {
         val cameraProviderFuture =
-            //ProcessCameraProvider.getInstance(requireContext())
             ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(
             {
@@ -267,14 +279,16 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                 ExerciseManager.repCount = 0
                                 findViewById<TextView>(R.id.seriesTV).text=newSeries.toString() + "/$numSeries"
                                 findViewById<TextView>(R.id.repTV).text="0/$numReps"
-                                ExerciseManager.timerGoing = true
-                                ExerciseManager.isExerciseInProgress = false
+                                //ExerciseManager.timerGoing = true
+                                println("cambia timerGoing a true")
+                                //ExerciseManager.isExerciseInProgress = false
                                 runOnUiThread {
                                     findViewById<TextView>(R.id.timerView).visibility = View.VISIBLE
                                 }
                                 startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
                             }
                             else{
+
                                 runOnUiThread{
                                     cameraProvider?.unbindAll()
                                     backgroundExecutor.shutdownNow()
@@ -285,13 +299,22 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                         it
                                     )
                                 }
-
+                                ExerciseManager.isExerciseInProgress = false
+                                val bundle = Bundle()
+                                if((messageReceiver!!.accumulator > 0) and (messageReceiver!!.numElements > 0)){
+                                    messageReceiver?.let { bundle.putInt("averageBPM",
+                                        (it.accumulator/it.numElements)
+                                    ) }
+                                }
+                                else{
+                                    messageReceiver?.let { bundle.putInt("averageBPM", 0) }
+                                }
+                                val fragment = ResultFragment()
+                                fragment.setArguments(bundle)
                                 supportFragmentManager.commit {
-                                    add<ResultFragment>(R.id.fragment_container_view)
+                                    replace(R.id.fragment_container_view, fragment)
                                     setReorderingAllowed(true)
                                 }
-
-
 
                             }
                         }
@@ -311,14 +334,16 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         if (end) {
             return false
         }
-        if (!ExerciseManager.timerGoing) { //timer is ended
+        if (!ExerciseManager.timerGoing && !ExerciseManager.isExerciseInProgress) { //timer is ended
             ExerciseManager.isExerciseInProgress = true
             runOnUiThread { findViewById<TextView>(R.id.timerView).visibility=View.INVISIBLE }
+            println("Cambiato lo stato")
         }
         return ExerciseManager.isExerciseInProgress
     }
-    //QUESTO è PRESO DAL CODICE DI DENNY
+
     private fun requestCameraPermissions() {
+
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.CAMERA
@@ -330,7 +355,27 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                 CAMERA_PERMISSION_REQUEST_CODE
             )
         }
+
     }
+
+    private fun startBluetooth(){
+        if(!BluetoothAdapter.getDefaultAdapter().isEnabled){
+            val bluetoothSettings = Intent(ACTION_REQUEST_ENABLE)
+            if ((ContextCompat.checkSelfPermission(this, BLUETOOTH_CONNECT)
+                == PackageManager.PERMISSION_GRANTED)) {
+                startActivity(bluetoothSettings)
+            }
+            else{
+                val requestConnectPermission: ActivityResultLauncher<String> =
+                    registerForActivityResult(ActivityResultContracts.RequestPermission()) { permissionGranted ->
+                        if (permissionGranted) {
+                            startActivity(bluetoothSettings)
+                        }
+                    }
+                requestConnectPermission.launch(BLUETOOTH_CONNECT)
+            }
+            }
+        }
 
     //QUESTO è PRESO DAL CODICE DI DENNY
     override fun onRequestPermissionsResult(
@@ -346,13 +391,12 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             }
         }
     }
-
 }
 
 
 class ExerciseManager {
     companion object {
-        var timerGoing: Boolean = true
+        var timerGoing: Boolean = false
         var isExerciseInProgress: Boolean = false
         var repCount: Int = 0
 

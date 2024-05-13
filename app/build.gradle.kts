@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.android.cameraapplication"
-        minSdk = 24
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -47,7 +47,7 @@ val ktorVersion: String by project
 
 dependencies {
 
-
+    implementation ("com.google.android.material:material:1.2.1")
     implementation("androidx.fragment:fragment-ktx:1.7.0")
     implementation("io.ktor:ktor-server-netty:1.4.0")
     implementation("io.ktor:ktor:1.4.0")

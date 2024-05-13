@@ -4,17 +4,16 @@
     <uses-feature
             android:name="android.hardware.camera"
             android:required="false" />
-    <uses-feature android:name="android.hardware.bluetooth" android:required="false"/>
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission
-            android:name="android.permission.CAMERA" 
-            tools:ignore="PermissionImpliesUnsupportedChromeOsHardware"/>
+    <uses-feature android:name="android.hardware.bluetooth" android:required="true"/>
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
     <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission
+            android:name="android.permission.CAMERA" 
+            tools:ignore="PermissionImpliesUnsupportedChromeOsHardware"/>
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -25,7 +24,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CameraApplication"
         tools:targetApi="31">
-
         <activity
             android:name=".MainActivity"
             android:exported="true">

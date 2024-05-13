@@ -246,32 +246,9 @@ class SmartwatchConnector: Service() {
     override fun onCreate() {
         super.onCreate()
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.BLUETOOTH,
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            mainActivity?.let {
-                ActivityCompat.requestPermissions(
-                    it,
-                    arrayOf(Manifest.permission.BLUETOOTH),
-                    BLUETOOTH_PERMISSION_GRANTED)
-            }
-        }
-
-
         bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
-        val bluetoothAdapter = bluetoothManager.adapter
         val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
         registerReceiver(bluetoothReceiver, filter)
-        if (!bluetoothAdapter.isEnabled) {
-            Log.d(TAG, "Bluetooth is currently disabled...enabling")
-            bluetoothAdapter.enable()
-        } else {
-            Log.d(TAG, "Bluetooth enabled...starting services")
-            startAdvertising()
-            startServer()
-        }
 
         val intent = Intent(this, CameraActivity.MessageReceiver::class.java)
         intent.setAction("android.intent.action.BPM_UPDATE")

@@ -12,18 +12,24 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 
 val errors = listOf(Triple(1, 1, "wide knees"), Triple(1, 1, "wide knees"),
     Triple(1, 1, "wide knees"), Triple(1, 1, "wide knees"))
 
+var averageBPM: Int = 0
+
 class ResultFragment : Fragment(){
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        averageBPM = requireArguments().getInt("averageBPM")
         return inflater.inflate(R.layout.results_fragment, container, false)
     }
-    @SuppressLint("SetTextI18n")
+    @SuppressLint("SetTextI18n", "CutPasteId")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+
 
         // Create a GradientDrawable
         val gradientDrawable = GradientDrawable(
@@ -35,20 +41,53 @@ class ResultFragment : Fragment(){
         viewWithGradient.background = gradientDrawable
 
         val layout = view.findViewById<LinearLayout>(R.id.linearLayout)
+        layout.gravity = Gravity.CENTER
+
+        if (averageBPM == 0){
+            view.findViewById<TextView>(R.id.averageBPM).text = "BPM data not received"
+        }
+        else{
+            view.findViewById<TextView>(R.id.averageBPM).text = "Average BPM value: " + averageBPM.toString()
+        }
+        view.findViewById<TextView>(R.id.averageBPM).textSize = 15f
+        view.findViewById<TextView>(R.id.averageBPM).setTextColor(Color.WHITE)
+        view.findViewById<TextView>(R.id.averageBPM).gravity = Gravity.CENTER
 
         var textView : TextView
         for(element in errors){
+
+            val parentWidth = resources.displayMetrics.widthPixels
+            val desiredWidthPercentage = 0.95
+
+
+
+            val cardView = CardView(requireContext()).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    (parentWidth * desiredWidthPercentage).toInt(),
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                cardElevation = 20f // Elevation of the card
+                radius = 20f // Corner radius of the card
+                preventCornerOverlap = true
+                useCompatPadding = true
+                setCardBackgroundColor(Color.WHITE)
+            }
+
+
             textView = TextView(requireContext())
-            textView.textSize = 20f
-            textView.setTextColor(Color.WHITE)
+            textView.textSize = 15f
+            textView.setTextColor(Color.BLACK)
             textView.gravity = Gravity.CENTER_HORIZONTAL
+            textView.apply {  setPadding(5, 5, 5, 5) }
             textView.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             )
             textView.text = "Rep: " + element.first.toString() + " - Serie: " + element.second.toString() +
                     " - Motivation:"+ element.third
-            layout.addView(textView)
+
+            cardView.addView(textView)
+            layout.addView(cardView)
         }
 
         var buttonBack = Button(requireContext())
@@ -57,8 +96,14 @@ class ResultFragment : Fragment(){
             startActivity(intent)
         }
         buttonBack.setText("Back")
-        buttonBack.gravity = Gravity.CENTER_HORIZONTAL
+        buttonBack.setTextColor(Color.BLACK)
+        buttonBack.gravity = Gravity.CENTER
+        val drawable = GradientDrawable()
+        drawable.setSize(50, 57)
+        buttonBack.background = drawable
+        buttonBack.setBackgroundColor(0xFFFFFFFF.toInt())
         layout.addView(buttonBack)
+
     }
 
 }
