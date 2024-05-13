@@ -9,15 +9,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
-import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -31,10 +27,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.add
 import androidx.fragment.app.commit
-import androidx.fragment.app.replace
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.mediapipe.examples.poselandmarker.PoseLandmarkerHelper
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
@@ -67,7 +61,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
     //QUESTO è PRESO DAL CODICE DI DENNY
     private lateinit var previewView : PreviewView
 
@@ -95,10 +89,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
 
     }
-
-
-
-
 
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -267,6 +257,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                     if(ExerciseManager.isExerciseInProgress){
                         val phase = ExerciseManager.checkSquatPhase()
                         ExerciseManager.updateRepCount(phase)
+                        println("repCount = " + ExerciseManager.repCount)
                         findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps" //update rep count
                         if(ExerciseManager.repCount == numReps){ //new series
                             ExerciseManager.repCount = 0
@@ -300,9 +291,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                     add<ResultFragment>(R.id.fragment_container_view)
                                     setReorderingAllowed(true)
                                 }
-
-
-
                             }
                         }
                     }else {
@@ -365,18 +353,29 @@ class ExerciseManager {
         var timerGoing: Boolean = false
         var isExerciseInProgress: Boolean = false
         var repCount: Int = 0
+        private val FORM_TAG = "Form Assessment"
+        private val hipComment = "hip not correct in phase "
+        private val kneeShoulderComment = "knees too far apart from shoulders in phase "
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
         private var proximityThreshold: Float = 0.0f
         private var exerciseState = 0
+        private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)
+        private val repsDictionary = mutableMapOf<Triple<Int, Int, String>, Int>()
 
-        private const val G30 = 0.523
+        private const val G25 = 0.500f
+        private const val G30 = 0.523f
+        private const val G35 = 0.610f
         private const val G45 = 0.785f
         private const val G60 = 1.047f
+        private const val G70 = 1.221f
+        private const val G80 = 1.396f
         private const val G90 = 1.570f
         private const val G120 = 2.094f
+        private const val G130 = 2.268f
         private const val G150 = 2.618f
-        private const val G180 = 3.141f
+        private const val G160 = 2.792f
+        private const val G170 = 2.967f
 
         fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
             currentLandmark = landmark
@@ -394,24 +393,72 @@ class ExerciseManager {
         }
 
         fun checkSquatPhase(): Int {
-            val angle = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+            //angle between hip, knee and foot
+            val angleKnee = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+
+            // ROBA MIA
+            val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
+            val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
+            val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
+            //val DioBonoDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12))
             var phase = 0
             when {
-                angle > G150 -> phase = 0
-                (angle > G90) and (angle <= G150) -> phase = 1
-                (angle > G60) and (angle <= G90) -> phase = 2
-                (angle <= G60) -> phase = 3
+                angleKnee > G120 -> {
+                    phase = 0
+                    if (angleHip < G130) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP " + phase)
+                    }
+                    if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                    }
+                }
+                (angleKnee > G60) and (angleKnee <= G130) -> {
+                    phase = 1
+                    if (angleHip <= G30) {
+                        repsPerformedWrong.add(Triple(100, repCount, hipComment + phase))
+                        insertTriplet(Triple(100, repCount, hipComment + phase))
+                        Log.d(FORM_TAG, "HIP " + phase)
+                    }
+                    if (kneeDistance > (ankleDistance*2.5))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                    }
+                }
+                (angleKnee <= G60) -> {
+                    phase = 2
+                    if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
+                    {
+                        repsPerformedWrong.add(Triple(69, repCount, kneeShoulderComment + phase))
+                        insertTriplet(Triple(69, repCount, kneeShoulderComment + phase))
+                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                    }
+                }
             }
+
+            //println("grado dell' HIP = " + (angleHip*57.958).toInt())
+            //println("grado dell' KNEE = " + (angleKnee*57.958).toInt())
+            //println("phase = " + phase)
+            //println("KNEE = " + kneeDistance)
+            //println("ANKLE = " + ankleDistance)
+            //println(repsDictionary)
+            //println("DAIIIIII = " + DioBonoDistance)
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
+            //println("exerciseState = " + exerciseState)
             when {
-                (exerciseState == 0) and (phase == 1) -> exerciseState++
-                (exerciseState == 1) and (phase == 2) -> exerciseState++
-                (exerciseState == 2) and (phase == 3) -> exerciseState++
-                (exerciseState == 3) and (phase == 2) -> exerciseState++
-                (exerciseState == 4) and (phase == 1) -> exerciseState++
-                (exerciseState == 5) and (phase == 0) -> {
+                (exerciseState == 0) and (phase == 0) -> exerciseState++
+                (exerciseState == 1) and (phase == 1) -> exerciseState++
+                (exerciseState == 2) and (phase == 2) -> exerciseState++
+                (exerciseState == 3) and (phase == 1) -> exerciseState++
+                (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
                     repCount++
                     return true
@@ -419,6 +466,14 @@ class ExerciseManager {
             }
             return false
         }
+
+        fun insertTriplet(key: Triple<Int, Int, String>) {
+            if (repsDictionary.containsKey(key))
+                repsDictionary[key] = repsDictionary.getValue(key) + 1
+            else
+                repsDictionary[key] = 1
+        }
+
         fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
             val dx = a.x() - b.x()
             val dy = a.y() - b.y()
