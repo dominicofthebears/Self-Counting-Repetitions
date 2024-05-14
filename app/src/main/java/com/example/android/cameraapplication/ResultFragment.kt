@@ -15,14 +15,13 @@ import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 
-val errors = listOf(Triple(1, 1, "wide knees"), Triple(1, 1, "wide knees"),
-    Triple(1, 1, "wide knees"), Triple(1, 1, "wide knees"))
-
+var errors = mutableMapOf<Triple<Int, Int, String>, Int>()
 var averageBPM: Int = 0
 
 class ResultFragment : Fragment(){
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         averageBPM = requireArguments().getInt("averageBPM")
+        errors = (requireArguments().getSerializable("errors") as? MutableMap<Triple<Int, Int, String>, Int>)!!
         return inflater.inflate(R.layout.results_fragment, container, false)
     }
     @SuppressLint("SetTextI18n", "CutPasteId")
@@ -60,7 +59,6 @@ class ResultFragment : Fragment(){
             val desiredWidthPercentage = 0.95
 
 
-
             val cardView = CardView(requireContext()).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     (parentWidth * desiredWidthPercentage).toInt(),
@@ -83,8 +81,15 @@ class ResultFragment : Fragment(){
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT,
             )
-            textView.text = "Rep: " + element.first.toString() + " - Serie: " + element.second.toString() +
-                    " - Motivation:"+ element.third
+
+            if(element.key.first.equals(Int.MAX_VALUE)){
+                textView.text = "You did no mistakes during this workout, good job!"
+            }
+            else{
+                textView.text = "Serie: " + element.key.first.toString() + " - Rep: " + element.key.second.toString() +
+                        " - Motivation: "+ element.key.third
+            }
+
 
             cardView.addView(textView)
             layout.addView(cardView)
