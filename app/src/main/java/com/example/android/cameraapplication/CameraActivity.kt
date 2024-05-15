@@ -396,9 +396,9 @@ class ExerciseManager {
             //angle between hip, knee and foot
             val angleKnee = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
 
-            // ROBA MIA
+            // metrics computation
             val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
-            val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
+            val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between ankles
             val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             //val DioBonoDistance = relativeDistance(currentLandmark.get(11), currentLandmark.get(12))
             var phase = 0
@@ -448,7 +448,6 @@ class ExerciseManager {
             //println("KNEE = " + kneeDistance)
             //println("ANKLE = " + ankleDistance)
             //println(repsDictionary)
-            //println("DAIIIIII = " + DioBonoDistance)
             return phase
         }
         fun updateRepCount(phase: Int): Boolean{
