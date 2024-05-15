@@ -18,12 +18,13 @@ class ExerciseManager {
         private val kneeShoulderComment = "knees too far apart from shoulders in phase "
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
-        private var proximityThreshold: Float = 0.0f
+        //private var proximityThreshold: Float = 0.0f
         private var exerciseState = 0
         private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)
         val repsDictionary = mutableMapOf<Triple<Int, Int, String>, Int>()
             get() = field
 
+        // Constants to map radians to degrees
         private const val G25 = 0.500f
         private const val G30 = 0.523f
         private const val G35 = 0.610f
@@ -40,19 +41,23 @@ class ExerciseManager {
 
         fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
             currentLandmark = landmark
+            /*
             val noseMouthL = relativeDistance(currentLandmark.get(0), currentLandmark.get(9))
             val noseMouthR = relativeDistance(currentLandmark.get(0), currentLandmark.get(10))
             val noseMouth = (noseMouthL + noseMouthR) / 2
             proximityThreshold = noseMouth
+             */
         }
-
+        /*
         fun checkStart(): Boolean {
             val dist = relativeDistance(currentLandmark.get(19), currentLandmark.get(0))
             if(dist < proximityThreshold){
                 return true
             }else return false
         }
+         */
 
+        // Check the squat phase and form correctness
         fun checkSquatPhase(): Int {
             //angle between hip, knee and foot
             val angleKnee = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
@@ -60,6 +65,10 @@ class ExerciseManager {
             val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
             val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             var phase = 0
+            // Check the squat phase looking at the angle between hip, knee and foot
+            // For each phase, check the form correctness looking at:
+            // - the angle between shoulder, hip and knee
+            // - the distance between the knees
             when {
                 angleKnee > G120 -> {
                     phase = 0
@@ -118,6 +127,7 @@ class ExerciseManager {
 
             return phase
         }
+        // Update the rep count according to the phase and the exercise state
         fun updateRepCount(phase: Int): Boolean{
             //println("exerciseState = " + exerciseState)
             when {
@@ -142,6 +152,7 @@ class ExerciseManager {
             return false
         }
 
+        // Insert a triplet in the dictionary
         fun insertTriplet(key: Triple<Int, Int, String>) {
             if (repsDictionary.containsKey(key))
                 repsDictionary[key] = repsDictionary.getValue(key) + 1
@@ -149,12 +160,14 @@ class ExerciseManager {
                 repsDictionary[key] = 1
         }
 
+        // Euclidean distance between 2 points
         fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
             val dx = a.x() - b.x()
             val dy = a.y() - b.y()
             val dz = a.z() - b.z()
             return sqrt(dx * dx + dy * dy + dz * dz)
         }
+        // Dot product between 2 vectors (a,b) and (b,c)
         fun dotProduct(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
             val abx = b.x() - a.x()
             val aby = b.y() - a.y()
@@ -164,6 +177,7 @@ class ExerciseManager {
             val bcz = b.z() - c.z()
             return abx * bcx + aby * bcy + abz * bcz
         }
+        // Angle in b between a and c (in radians)
         fun angleBetweenPoints(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
             val dot = dotProduct(a, b, c)
             val magAB = relativeDistance(a, b)
