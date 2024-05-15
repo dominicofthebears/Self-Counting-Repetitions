@@ -149,7 +149,7 @@ class ExerciseManager {
                     }
                 }
             }
-            return false
+            return true
         }
 
         // Insert a triplet in the dictionary
