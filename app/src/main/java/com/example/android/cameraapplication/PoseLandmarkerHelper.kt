@@ -37,27 +37,25 @@ class PoseLandmarkerHelper(
     var minPoseTrackingConfidence: Float = DEFAULT_POSE_TRACKING_CONFIDENCE,
     var minPosePresenceConfidence: Float = DEFAULT_POSE_PRESENCE_CONFIDENCE,
     //var currentModel: Int = MODEL_POSE_LANDMARKER_HEAVY,
-    var currentDelegate: Int = DELEGATE_CPU,
+    //var currentDelegate: Int = DELEGATE_CPU,
     var runningMode: RunningMode = RunningMode.IMAGE,
     val context: Context,
-    // this listener is only used when running in RunningMode.LIVE_STREAM
+    // This listener is used to return the results of the Pose Landmarker
     val poseLandmarkerHelperListener: LandmarkerListener? = null
 ) {
-
-    // For this example this needs to be a var so it can be reset on changes.
-    // If the Pose Landmarker will not change, a lazy val would be preferable.
+    // The PoseLandmarker object that will run the Pose Landmarker model
     private var poseLandmarker: PoseLandmarker? = null
 
+    // Initialize the PoseLandmarker object
     init {
         setupPoseLandmarker()
     }
-
+    //TODO queste erano da usare tipo in un onDestroy o qualcosa del genere, penso che a sto punto non servano
     fun clearPoseLandmarker() {
         poseLandmarker?.close()
         poseLandmarker = null
     }
 
-    // Return running status of PoseLandmarkerHelper
     fun isClose(): Boolean {
         return poseLandmarker == null
     }
@@ -71,7 +69,8 @@ class PoseLandmarkerHelper(
         // Set general pose landmarker options
         val baseOptionBuilder = BaseOptions.builder()
 
-        // Use the specified hardware for running the model. Default to CPU
+        //the Use the specified hardware for running  model. Default to CPU
+        /*
         when (currentDelegate) {
             DELEGATE_CPU -> {
                 baseOptionBuilder.setDelegate(Delegate.CPU)
@@ -79,7 +78,8 @@ class PoseLandmarkerHelper(
             DELEGATE_GPU -> {
                 baseOptionBuilder.setDelegate(Delegate.GPU)
             }
-        }
+        } */
+        baseOptionBuilder.setDelegate(Delegate.CPU)
 
         val modelName = "pose_landmarker_full.task"
 
@@ -204,6 +204,7 @@ class PoseLandmarkerHelper(
     // pose landmarker inference on the video. This process will evaluate every
     // frame in the video and attach the results to a bundle that will be
     // returned.
+    /*
     fun detectVideoFile(
         videoUri: Uri,
         inferenceIntervalMs: Long
@@ -291,9 +292,11 @@ class PoseLandmarkerHelper(
             ResultBundle(resultList, inferenceTimePerFrameMs, height, width)
         }
     }
+     */
 
     // Accepted a Bitmap and runs pose landmarker inference on it to return
     // results back to the caller
+    /*
     fun detectImage(image: Bitmap): ResultBundle? {
         if (runningMode != RunningMode.IMAGE) {
             throw IllegalArgumentException(
@@ -328,6 +331,7 @@ class PoseLandmarkerHelper(
         )
         return null
     }
+     */
 
     // Return the landmark result to this PoseLandmarkerHelper's caller
     private fun returnLivestreamResult(
@@ -356,18 +360,17 @@ class PoseLandmarkerHelper(
 
     companion object {
         const val TAG = "PoseLandmarkerHelper"
-
-        const val DELEGATE_CPU = 0
-        const val DELEGATE_GPU = 1
+        //const val DELEGATE_CPU = 0
+        //const val DELEGATE_GPU = 1
         const val DEFAULT_POSE_DETECTION_CONFIDENCE = 0.5F
         const val DEFAULT_POSE_TRACKING_CONFIDENCE = 0.5F
         const val DEFAULT_POSE_PRESENCE_CONFIDENCE = 0.5F
-        const val DEFAULT_NUM_POSES = 1
+        //const val DEFAULT_NUM_POSES = 1
         const val OTHER_ERROR = 0
         const val GPU_ERROR = 1
-        const val MODEL_POSE_LANDMARKER_FULL = 0
-        const val MODEL_POSE_LANDMARKER_LITE = 1
-        const val MODEL_POSE_LANDMARKER_HEAVY = 2
+        //const val MODEL_POSE_LANDMARKER_FULL = 0
+        //const val MODEL_POSE_LANDMARKER_LITE = 1
+        //const val MODEL_POSE_LANDMARKER_HEAVY = 2
     }
 
     data class ResultBundle(

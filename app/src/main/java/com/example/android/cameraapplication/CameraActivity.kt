@@ -161,7 +161,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                 minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
                 minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
                 minPosePresenceConfidence = PoseLandmarkerHelper.DEFAULT_POSE_PRESENCE_CONFIDENCE,
-                currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
+                //currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
                 poseLandmarkerHelperListener = this
             )
         }
