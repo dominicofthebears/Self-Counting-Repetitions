@@ -67,7 +67,7 @@ class ExerciseManager {
                     {
                         if (angleHip < G130) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                            insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
+                            //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsDoneDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
@@ -75,7 +75,7 @@ class ExerciseManager {
                         if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsDoneDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -87,7 +87,7 @@ class ExerciseManager {
                     {
                         if (angleHip <= G30) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                            insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
+                            //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsDoneDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
@@ -95,7 +95,7 @@ class ExerciseManager {
                         if (kneeDistance > (ankleDistance*2.5))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsDoneDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -108,7 +108,7 @@ class ExerciseManager {
                         if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsDoneDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -134,6 +134,7 @@ class ExerciseManager {
                     }
                     else {
                         errorsDoneDuringExercise = 0
+                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                         return false
                     }
                 }
