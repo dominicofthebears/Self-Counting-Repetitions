@@ -46,23 +46,29 @@ import java.util.TimerTask
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-
 class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListener {
-
+    // User input variables
     var numReps: Int = 0
     var numSeries: Int = 0
     var restTimeMinutes: Int = 0
     var restTimeSeconds: Int = 0
+
+    // Flags
     var end: Boolean = false
     var starting: Boolean = true
+
     var seriesCounter: Int = 0
 
     companion object {
+        // Request code for camera permissions
         private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
+        // Logging tag
         private const val TAG = "Pose Landmarker"
     }
 
+    // Pose LandmarkerHelper instance, it wrap the PoseLandmarker and provides some useful methods
     private lateinit var poseLandmarkerHelper: PoseLandmarkerHelper
+    // CameraX variables
     private var preview: Preview? = null
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
@@ -73,8 +79,10 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     /** Blocking ML operations are performed using this executor */
     private lateinit var backgroundExecutor: ExecutorService
 
+    // Message receiver to receive messages from the smartwatch
     private var messageReceiver : MessageReceiver? = null
 
+    // Service connection to the smartwatch
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             val binder = service as SmartwatchConnector.ActivityBinder
@@ -86,6 +94,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
     }
 
+    // Inner class to receive messages from the smartwatch
     inner class MessageReceiver: BroadcastReceiver() {
         var accumulator: Int = 0
             get() = field
@@ -100,6 +109,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     }
 
+    // OnCreate method to initialize the activity and start the camera and the smartwatch connection
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         requestCameraPermissions()
@@ -107,29 +117,36 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
 
+        // Set the red cross image, that will be shown when a wrong rep is detected, to invisible
         findViewById<ImageView>(redCrossImageView).alpha = 0f
 
+        // Initialize the variables with the user
         ExerciseManager.timerGoing=false
         ExerciseManager.isExerciseInProgress=false
         end = false
         starting = true
 
+        // Get the user input from the previous activity
         numReps = intent.getIntExtra("numReps", 0)
         numSeries = intent.getIntExtra("numSets", 0)
         restTimeMinutes = intent.getIntExtra("restSeconds", 0)
         restTimeSeconds = intent.getIntExtra("restMinutes", 0)
 
+        // Set number of reps and series in the UI
         findViewById<TextView>(R.id.repTV).text = java.lang.String("0/$numReps")
         findViewById<TextView>(R.id.seriesTV).text = java.lang.String("1/$numSeries")
 
+        // Register the message receiver to receive messages from the smartwatch
         messageReceiver = MessageReceiver()
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver!!, IntentFilter("android.intent.action.BPM_UPDATE"))
         val serviceIntent = Intent(this, SmartwatchConnector::class.java)
         startService(serviceIntent)
         bindService(serviceIntent, serviceConnection, Context.RECEIVER_NOT_EXPORTED)
 
+        // Set up the camera
         previewView = findViewById<PreviewView>(R.id.previewView)
         setUpCamera()
+        // Initialize the PoseLandmarkerHelper instance in a background thread to avoid blocking the UI thread
         backgroundExecutor = Executors.newSingleThreadExecutor()
 
         backgroundExecutor.execute {
@@ -152,6 +169,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
 
     @SuppressLint("SetTextI18n")
+    // Function to start the timer for the rest time between series and the timer for the exercise
     private fun startTimer(num: Int, flag: Boolean){
         ExerciseManager.timerGoing = true
         ExerciseManager.isExerciseInProgress = false
@@ -193,6 +211,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             e.printStackTrace()
         }
     }
+    // Function to set up the camera and bind the camera use cases to the camera provider to start the camera preview and the image analysis
     private fun setUpCamera() {
         val cameraProviderFuture =
             ProcessCameraProvider.getInstance(this)
@@ -204,17 +223,20 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         )
     }
     @SuppressLint("UnsafeOptInUsageError")
+    // Function to bind the camera use cases to the camera provider to start the camera preview and the image analysis
     private fun bindCameraUseCases() {
+        // Get the camera provider
         val cameraProvider = cameraProvider
             ?: throw IllegalStateException("Camera initialization failed.")
-
+        // Set up the camera selector to select the front/back camera
         val cameraSelector =
             CameraSelector.Builder().requireLensFacing(cameraFacing).build()
 
-        // Preview. Only using the 4:3 ratio because this is the closest to our models
-        preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .build()
-        startTimer(3, true) //initial timer, 3 seconds
+        // Preview. Only using the 4:3 ratio because this is the closest to the input ratio of the PoseLandmarker
+        preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build()
+        // start the timer to give time to the user to get ready
+        startTimer(3, true)
+        // ImageAnalysis to analyze the camera frames and call the detect pose method
         imageAnalyzer =
             ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -228,10 +250,10 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                 }
         // Must unbind the use-cases before rebinding them
         cameraProvider.unbindAll()
-
+        // Bind use cases to camera
         try {
             // A variable number of use-cases can be passed here -
-            // camera provides access to CameraControl & CameraInfo
+            // Camera provides access to CameraControl & CameraInfo
             camera = cameraProvider.bindToLifecycle(
                 this, cameraSelector, preview, imageAnalyzer
             )
@@ -241,6 +263,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
             Log.e(TAG, "Use case binding failed", exc)
         }
     }
+    // Function to detect the pose in the camera frames using the PoseLandmarkerHelper
     private fun detectPose(imageProxy: ImageProxy) {
         if(this::poseLandmarkerHelper.isInitialized) {
             poseLandmarkerHelper.detectLiveStream(
@@ -250,32 +273,44 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
     }
     @SuppressLint("CutPasteId")
+    // Function to handle the results of the PoseLandmarkerHelper
     override fun onResults(
         resultBundle: PoseLandmarkerHelper.ResultBundle
     ) {
-
+        // Get the landmarks from the PoseLandmarker result
         resultBundle.results[0]?.let { poseLandmarkerResult ->
             for(landmark in poseLandmarkerResult.landmarks()) {
-                    //user detected
+                //An user is detected in the camera frame
+                    // Set the current landmark in the ExerciseManager
                     ExerciseManager.setCurrentLandmark(landmark)
+                    // Check if an exercise is in progress
                     if(ExerciseManager.isExerciseInProgress){
+                        // Check in which phase of the squat the user is
                         val phase = ExerciseManager.checkSquatPhase()
+                        // Update the rep count according to the phase
                         ExerciseManager.updateRepCount(phase)
-                        findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps" //update rep count
-                        if(ExerciseManager.repCount == numReps){ //new series
+                        // Update the UI with the rep count
+                        findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps"
+                        // Check if the current series is completed
+                        if(ExerciseManager.repCount == numReps){
+                            // Reset the rep count
                             ExerciseManager.repCount = 0
+                            // Increment the series count
                             seriesCounter = findViewById<TextView>(R.id.seriesTV).text.split("/")[0].toInt()
                             seriesCounter++
                             ExerciseManager.seriesCount++
-                            if(seriesCounter <= numSeries) { //launching of the timer for the rest time
+                            // Update the UI with the series count
+                            if(seriesCounter <= numSeries) {
                                 findViewById<TextView>(R.id.seriesTV).text=seriesCounter.toString() + "/$numSeries"
                                 findViewById<TextView>(R.id.repTV).text="0/$numReps"
                                 runOnUiThread {
                                     findViewById<TextView>(R.id.timerView).visibility = View.VISIBLE
                                 }
+                                // Start the timer for the rest time between series
                                 startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
                             }
                             else{
+                                // All the series are completed and the exercise is ended
                                 end = true
                                 ExerciseManager.isExerciseInProgress=false
                                 runOnUiThread{
@@ -290,6 +325,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                 }
                                 ExerciseManager.isExerciseInProgress = false
 
+                                // If the user has not performed any wrong rep
                                 if(ExerciseManager.repsDictionary.isEmpty()){
                                     ExerciseManager.repsDictionary.put(Triple(Int.MAX_VALUE, 0, ""), 0)
                                 }
@@ -325,10 +361,12 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
     }
 
+    // Function to handle the error messages from the PoseLandmarkerHelper
     override fun onError(error: String, errorCode: Int) {
         Log.d(TAG, "onError")
     }
 
+    // Function to change the flags according to the exercise status
     private fun changeFlags(): Boolean {
         if (end || starting) {
             return false
@@ -340,6 +378,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         return ExerciseManager.isExerciseInProgress
     }
 
+    // Function to request the camera permissions
     private fun requestCameraPermissions() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -354,7 +393,21 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
 
     }
+    // Function to handle the camera permissions request result
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
+            if (!(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                finish()
+            }
+        }
+    }
 
+    // Function to start the bluetooth connection
     private fun startBluetooth(){
         if(!BluetoothAdapter.getDefaultAdapter().isEnabled){
             val bluetoothSettings = Intent(ACTION_REQUEST_ENABLE)
@@ -370,19 +423,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         }
                     }
                 requestConnectPermission.launch(BLUETOOTH_CONNECT)
-            }
-            }
-        }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if (!(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                finish()
             }
         }
     }
