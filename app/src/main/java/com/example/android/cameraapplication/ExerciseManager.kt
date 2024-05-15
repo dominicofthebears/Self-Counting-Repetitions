@@ -11,6 +11,8 @@ class ExerciseManager {
         var isExerciseInProgress: Boolean = false
         var repCount: Int = 0
         var seriesCount: Int = 1
+        var errorsDoneDuringExercise: Int = 0
+        private val exerciseThresholdOnErrors: Int = 5
         private val FORM_TAG = "Form Assessment"
         private val hipComment = "hip not correct in phase "
         private val kneeShoulderComment = "knees too far apart from shoulders in phase "
@@ -61,41 +63,55 @@ class ExerciseManager {
             when {
                 angleKnee > G120 -> {
                     phase = 0
-                    if (angleHip < G130) {
-                        repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                        insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
-                        Log.d(FORM_TAG, "HIP " + phase)
-
-                    }
-                    if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
+                    if ((exerciseState == 0) or (exerciseState == 4))
                     {
-                        repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        if (angleHip < G130) {
+                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
+                            insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
+                            errorsDoneDuringExercise++
+                            Log.d(FORM_TAG, "HIP " + phase)
+
+                        }
+                        if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
+                        {
+                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            errorsDoneDuringExercise++
+                            Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        }
                     }
                 }
                 (angleKnee > G60) and (angleKnee <= G130) -> {
                     phase = 1
-                    if (angleHip <= G30) {
-                        repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                        insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
-                        Log.d(FORM_TAG, "HIP " + phase)
-
-                    }
-                    if (kneeDistance > (ankleDistance*2.5))
+                    if ((exerciseState == 1) or (exerciseState == 3))
                     {
-                        repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        if (angleHip <= G30) {
+                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
+                            insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
+                            errorsDoneDuringExercise++
+                            Log.d(FORM_TAG, "HIP " + phase)
+
+                        }
+                        if (kneeDistance > (ankleDistance*2.5))
+                        {
+                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            errorsDoneDuringExercise++
+                            Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        }
                     }
                 }
                 (angleKnee <= G60) -> {
                     phase = 2
-                    if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
+                    if (exerciseState == 2)
                     {
-                        repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                        Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
+                        {
+                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                            errorsDoneDuringExercise++
+                            Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
+                        }
                     }
                 }
             }
@@ -111,8 +127,15 @@ class ExerciseManager {
                 (exerciseState == 3) and (phase == 1) -> exerciseState++
                 (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
-                    repCount++
-                    return true
+                    if (errorsDoneDuringExercise < exerciseThresholdOnErrors) {
+                        repCount++
+                        errorsDoneDuringExercise = 0
+                        return true
+                    }
+                    else {
+                        errorsDoneDuringExercise = 0
+                        return false
+                    }
                 }
             }
             return false
