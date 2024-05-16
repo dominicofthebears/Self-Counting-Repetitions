@@ -35,7 +35,10 @@ class ExerciseManager {
         private const val G70 = 1.221f
         private const val G80 = 1.396f
         private const val G90 = 1.570f
+        private const val G110 = 1.919f
         private const val G120 = 2.094f
+        private const val G140 = 2.443f
+        private const val G145 = 2.530f
         private const val G130 = 2.268f
         private const val G150 = 2.618f
         private const val G160 = 2.792f
@@ -62,28 +65,28 @@ class ExerciseManager {
         // Check the squat phase and form correctness
         fun checkSquatPhase(): Int {
             //angle between hip, knee and foot
-            val angleKnee = angleBetweenPoints(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
-            val angleHip = angleBetweenPoints(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
-            val ankleDistance = relativeDistance(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
-            val kneeDistance = relativeDistance(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
+            val angleKnee = angleBetweenPoints2D(currentLandmark.get(24), currentLandmark.get(26), currentLandmark.get(28))
+            val angleHip = angleBetweenPoints2D(currentLandmark.get(26), currentLandmark.get(24), currentLandmark.get(12))
+            val ankleDistance = relativeDistance2D(currentLandmark.get(26), currentLandmark.get(28)) // distance between shoulders
+            val kneeDistance = relativeDistance3D(currentLandmark.get(25), currentLandmark.get(26)) // distance between feet
             var phase = 0
             // Check the squat phase looking at the angle between hip, knee and foot
             // For each phase, check the form correctness looking at:
             // - the angle between shoulder, hip and knee
             // - the distance between the knees
             when {
-                angleKnee > G130 -> {
+                angleKnee > G145 -> {
                     phase = 0
                     if ((exerciseState == 1) or (exerciseState == 0))
                     {
-                        if (angleHip < G130) {
+                        if (angleHip < G140) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
-                        if ((kneeDistance < (ankleDistance*1.5)) or (kneeDistance > ankleDistance*4.7))
+                        if ((kneeDistance < (ankleDistance*4)) or (kneeDistance > ankleDistance*8))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
@@ -92,18 +95,18 @@ class ExerciseManager {
                         }
                     }
                 }
-                (angleKnee > G60) and (angleKnee <= G130) -> {
+                (angleKnee > G90) and (angleKnee <= G145) -> {
                     phase = 1
                     if ((exerciseState == 2) or (exerciseState == 4))
                     {
-                        if (angleHip <= G30) {
+                        if (angleHip <= G90) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
-                        if (kneeDistance > (ankleDistance*3))
+                        if ((kneeDistance < (ankleDistance*3)) or (kneeDistance > (ankleDistance*8)))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
@@ -112,11 +115,11 @@ class ExerciseManager {
                         }
                     }
                 }
-                (angleKnee <= G60) -> {
+                (angleKnee <= G90) -> {
                     phase = 2
                     if (exerciseState == 3)
                     {
-                        if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
+                        if ((kneeDistance < (ankleDistance*3)) or (kneeDistance > (ankleDistance*8)))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
@@ -127,13 +130,12 @@ class ExerciseManager {
                 }
             }
 
+            println("phase = " + phase)
             //println("KNEE = " + angleKnee*57.2958)
             //println("HIP = " + angleHip*57.2958)
-            println("knee distance = " + kneeDistance)
+            //println("knee distance = " + kneeDistance)
             println("ankle = " + ankleDistance)
-            println("phase = " + phase)
             println("state = " + exerciseState)
-
             return phase
         }
         // Update the rep count according to the phase and the exercise state
@@ -147,6 +149,8 @@ class ExerciseManager {
                 (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
                     errorsDoneDuringExercise = errorsAngleHipDuringExercise + errorsKneeDistanceDuringExercise
+                    //println("errori sull'hip = " + errorsAngleHipDuringExercise)
+                    //println("errori knee distance = " + errorsKneeDistanceDuringExercise)
                     if (errorsDoneDuringExercise < exerciseThresholdOnErrors) {
                         repCount++
                         errorsDoneDuringExercise = 0
@@ -177,14 +181,28 @@ class ExerciseManager {
         }
 
         // Euclidean distance between 2 points
-        fun relativeDistance(a: NormalizedLandmark, b: NormalizedLandmark): Float {
+        fun relativeDistance2D(a: NormalizedLandmark, b: NormalizedLandmark): Float {
+            val dx = a.x() - b.x()
+            val dy = a.y() - b.y()
+            return sqrt(dx * dx + dy * dy)
+        }
+
+        fun relativeDistance3D(a: NormalizedLandmark, b: NormalizedLandmark): Float {
             val dx = a.x() - b.x()
             val dy = a.y() - b.y()
             val dz = a.z() - b.z()
             return sqrt(dx * dx + dy * dy + dz * dz)
         }
         // Dot product between 2 vectors (a,b) and (b,c)
-        fun dotProduct(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+        fun dotProduct2D(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+            val abx = b.x() - a.x()
+            val aby = b.y() - a.y()
+            val bcx = b.x() - c.x()
+            val bcy = b.y() - c.y()
+            return abx * bcx + aby * bcy
+        }
+
+        fun dotProduct3D(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
             val abx = b.x() - a.x()
             val aby = b.y() - a.y()
             val abz = b.z() - a.z()
@@ -193,11 +211,19 @@ class ExerciseManager {
             val bcz = b.z() - c.z()
             return abx * bcx + aby * bcy + abz * bcz
         }
+
         // Angle in b between a and c (in radians)
-        fun angleBetweenPoints(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
-            val dot = dotProduct(a, b, c)
-            val magAB = relativeDistance(a, b)
-            val magBC = relativeDistance(b, c)
+        fun angleBetweenPoints2D(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+            val dot = dotProduct2D(a, b, c)
+            val magAB = relativeDistance2D(a, b)
+            val magBC = relativeDistance2D(b, c)
+            return acos(dot / (magAB * magBC))
+        }
+
+        fun angleBetweenPoints3D(a: NormalizedLandmark, b: NormalizedLandmark, c: NormalizedLandmark): Float {
+            val dot = dotProduct3D(a, b, c)
+            val magAB = relativeDistance3D(a, b)
+            val magBC = relativeDistance3D(b, c)
             return acos(dot / (magAB * magBC))
         }
     }
