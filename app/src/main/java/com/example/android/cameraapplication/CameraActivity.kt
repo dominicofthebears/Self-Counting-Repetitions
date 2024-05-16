@@ -15,6 +15,7 @@ import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
 import android.util.Log
 import android.view.View
@@ -58,6 +59,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     var starting: Boolean = true
 
     var seriesCounter: Int = 0
+
 
     companion object {
         // Request code for camera permissions
@@ -235,7 +237,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         // Preview. Only using the 4:3 ratio because this is the closest to the input ratio of the PoseLandmarker
         preview = Preview.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3).build()
         // start the timer to give time to the user to get ready
-        startTimer(3, true)
+        startTimer(5, true)
         // ImageAnalysis to analyze the camera frames and call the detect pose method
         imageAnalyzer =
             ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
@@ -279,7 +281,9 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     ) {
         // Get the landmarks from the PoseLandmarker result
         resultBundle.results[0]?.let { poseLandmarkerResult ->
+            val landmarks = poseLandmarkerResult.landmarks()
             for(landmark in poseLandmarkerResult.landmarks()) {
+
                 //An user is detected in the camera frame
                     // Set the current landmark in the ExerciseManager
                     ExerciseManager.setCurrentLandmark(landmark)
@@ -288,69 +292,76 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                         // Check in which phase of the squat the user is
                         val phase = ExerciseManager.checkSquatPhase()
                         // Update the rep count according to the phase
-                        ExerciseManager.updateRepCount(phase)
-                        // Update the UI with the rep count
-                        findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps"
-                        // Check if the current series is completed
-                        if(ExerciseManager.repCount == numReps){
-                            // Reset the rep count
-                            ExerciseManager.repCount = 0
-                            // Increment the series count
-                            seriesCounter = findViewById<TextView>(R.id.seriesTV).text.split("/")[0].toInt()
-                            seriesCounter++
-                            ExerciseManager.seriesCount++
-                            // Update the UI with the series count
-                            if(seriesCounter <= numSeries) {
-                                findViewById<TextView>(R.id.seriesTV).text=seriesCounter.toString() + "/$numSeries"
-                                findViewById<TextView>(R.id.repTV).text="0/$numReps"
-                                runOnUiThread {
-                                    findViewById<TextView>(R.id.timerView).visibility = View.VISIBLE
-                                }
-                                // Start the timer for the rest time between series
-                                startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
+                        if (!ExerciseManager.updateRepCount(phase)){
+                            runOnUiThread{
+                                wrongRepSignal()
                             }
-                            else{
-                                // All the series are completed and the exercise is ended
-                                end = true
-                                ExerciseManager.isExerciseInProgress=false
-                                runOnUiThread{
-                                    cameraProvider?.unbindAll()
-                                    backgroundExecutor.shutdownNow()
-                                }
-                                unbindService(serviceConnection)
-                                messageReceiver?.let {
-                                    LocalBroadcastManager.getInstance(this).unregisterReceiver(
-                                        it
-                                    )
-                                }
-                                ExerciseManager.isExerciseInProgress = false
 
-                                // If the user has not performed any wrong rep
-                                if(ExerciseManager.repsDictionary.isEmpty()){
-                                    ExerciseManager.repsDictionary.put(Triple(Int.MAX_VALUE, 0, ""), 0)
-                                }
-
-                                val bundle = Bundle().apply {
-                                    putSerializable("errors", ExerciseManager.repsDictionary as Serializable)
-                                }
-
-                                if((messageReceiver!!.accumulator > 0) and (messageReceiver!!.numElements > 0)){
-                                    messageReceiver?.let { bundle.putInt("averageBPM",
-                                        (it.accumulator/it.numElements)
-                                    ) }
+                        }
+                        else{
+                            // Update the UI with the rep count
+                            findViewById<TextView>(R.id.repTV).text=ExerciseManager.repCount.toString() + "/$numReps"
+                            // Check if the current series is completed
+                            if(ExerciseManager.repCount == numReps){
+                                // Reset the rep count
+                                ExerciseManager.repCount = 0
+                                // Increment the series count
+                                seriesCounter = findViewById<TextView>(R.id.seriesTV).text.split("/")[0].toInt()
+                                seriesCounter++
+                                ExerciseManager.seriesCount++
+                                // Update the UI with the series count
+                                if(seriesCounter <= numSeries) {
+                                    findViewById<TextView>(R.id.seriesTV).text=seriesCounter.toString() + "/$numSeries"
+                                    findViewById<TextView>(R.id.repTV).text="0/$numReps"
+                                    runOnUiThread {
+                                        findViewById<TextView>(R.id.timerView).visibility = View.VISIBLE
+                                    }
+                                    // Start the timer for the rest time between series
+                                    startTimer((restTimeMinutes * 60) + restTimeSeconds, false)
                                 }
                                 else{
-                                    println("Entro qui")
-                                    messageReceiver?.let { bundle.putInt("averageBPM", 0) }
-                                }
+                                    // All the series are completed and the exercise is ended
+                                    end = true
+                                    ExerciseManager.isExerciseInProgress=false
+                                    runOnUiThread{
+                                        cameraProvider?.unbindAll()
+                                        backgroundExecutor.shutdownNow()
+                                    }
+                                    unbindService(serviceConnection)
+                                    messageReceiver?.let {
+                                        LocalBroadcastManager.getInstance(this).unregisterReceiver(
+                                            it
+                                        )
+                                    }
+                                    ExerciseManager.isExerciseInProgress = false
 
-                                val fragment = ResultFragment()
-                                fragment.setArguments(bundle)
-                                supportFragmentManager.commit {
-                                    replace(R.id.fragment_container_view, fragment)
-                                    setReorderingAllowed(true)
-                                }
+                                    // If the user has not performed any wrong rep
+                                    if(ExerciseManager.repsDictionary.isEmpty()){
+                                        ExerciseManager.repsDictionary.put(Triple(Int.MAX_VALUE, 0, ""), 0)
+                                    }
 
+                                    val bundle = Bundle().apply {
+                                        putSerializable("errors", ExerciseManager.repsDictionary as Serializable)
+                                    }
+
+                                    if((messageReceiver!!.accumulator > 0) and (messageReceiver!!.numElements > 0)){
+                                        messageReceiver?.let { bundle.putInt("averageBPM",
+                                            (it.accumulator/it.numElements)
+                                        ) }
+                                    }
+                                    else{
+                                        println("Entro qui")
+                                        messageReceiver?.let { bundle.putInt("averageBPM", 0) }
+                                    }
+
+                                    val fragment = ResultFragment()
+                                    fragment.setArguments(bundle)
+                                    supportFragmentManager.commit {
+                                        replace(R.id.fragment_container_view, fragment)
+                                        setReorderingAllowed(true)
+                                    }
+
+                                }
                             }
                         }
                     }else {
@@ -427,18 +438,16 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
         }
     }
 
-    fun wrongRepSignal(){
-        val redCrossImageView = findViewById<ImageView>(redCrossImageView)
-
-        val animator = ObjectAnimator.ofFloat(redCrossImageView, "alpha", 0f, 1f)
-        animator.duration = 1000
-
-        animator.start()
-        redCrossImageView.postDelayed({
-            val dissolveAnimation = AnimationUtils.loadAnimation(this, R.anim.dissolve)
-            redCrossImageView.startAnimation(dissolveAnimation)
-        }, 1000)
-    }
+        fun wrongRepSignal(){
+            val redCrossImageView = findViewById<ImageView>(redCrossImageView)
+            val animator = ObjectAnimator.ofFloat(redCrossImageView, "alpha", 0f, 1f)
+            animator.duration = 2500
+            animator.start()
+            Handler(mainLooper).post {
+                val dissolveAnimation = AnimationUtils.loadAnimation(this, R.anim.dissolve)
+                redCrossImageView.startAnimation(dissolveAnimation)
+            }
+        }
 }
 
 

@@ -50,7 +50,6 @@ class PoseLandmarkerHelper(
     init {
         setupPoseLandmarker()
     }
-    //TODO queste erano da usare tipo in un onDestroy o qualcosa del genere, penso che a sto punto non servano
     fun clearPoseLandmarker() {
         poseLandmarker?.close()
         poseLandmarker = null
