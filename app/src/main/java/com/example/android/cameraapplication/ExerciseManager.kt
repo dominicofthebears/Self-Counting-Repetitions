@@ -12,7 +12,7 @@ class ExerciseManager {
         var repCount: Int = 0
         var seriesCount: Int = 1
         var errorsDoneDuringExercise: Int = 0
-        private val exerciseThresholdOnErrors: Int = 5
+        private val exerciseThresholdOnErrors: Int = 3
         private val FORM_TAG = "Form Assessment"
         private val hipComment = "hip not correct in phase "
         private val kneeShoulderComment = "knees too far apart from shoulders in phase "
