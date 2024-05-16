@@ -73,7 +73,7 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
     private var imageAnalyzer: ImageAnalysis? = null
     private var camera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private var cameraFacing = CameraSelector.LENS_FACING_FRONT
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
     private lateinit var previewView : PreviewView
 
     /** Blocking ML operations are performed using this executor */

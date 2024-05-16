@@ -12,10 +12,12 @@ class ExerciseManager {
         var repCount: Int = 0
         var seriesCount: Int = 1
         var errorsDoneDuringExercise: Int = 0
-        private val exerciseThresholdOnErrors: Int = 5
+        var errorsAngleHipDuringExercise: Int = 0
+        var errorsKneeDistanceDuringExercise: Int = 0
+        private val exerciseThresholdOnErrors: Int = 4
         private val FORM_TAG = "Form Assessment"
-        private val hipComment = "hip not correct in phase "
-        private val kneeShoulderComment = "knees too far apart from shoulders in phase "
+        private var hipComment = "hip not correct"
+        private var kneeShoulderComment = "knees too wide"
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
         //private var proximityThreshold: Float = 0.0f
@@ -70,14 +72,14 @@ class ExerciseManager {
             // - the angle between shoulder, hip and knee
             // - the distance between the knees
             when {
-                angleKnee > G120 -> {
+                angleKnee > G130 -> {
                     phase = 0
-                    if ((exerciseState == 0) or (exerciseState == 4))
+                    if ((exerciseState == 1) or (exerciseState == 0))
                     {
                         if (angleHip < G130) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
-                            errorsDoneDuringExercise++
+                            errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
@@ -85,45 +87,52 @@ class ExerciseManager {
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            errorsDoneDuringExercise++
+                            errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
                     }
                 }
                 (angleKnee > G60) and (angleKnee <= G130) -> {
                     phase = 1
-                    if ((exerciseState == 1) or (exerciseState == 3))
+                    if ((exerciseState == 2) or (exerciseState == 4))
                     {
                         if (angleHip <= G30) {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
-                            errorsDoneDuringExercise++
+                            errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
-                        if (kneeDistance > (ankleDistance*2.5))
+                        if (kneeDistance > (ankleDistance*3))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            errorsDoneDuringExercise++
+                            errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
                     }
                 }
                 (angleKnee <= G60) -> {
                     phase = 2
-                    if (exerciseState == 2)
+                    if (exerciseState == 3)
                     {
                         if ((kneeDistance > (ankleDistance*3.5))) // or (kneeDistance in (ankleDistance*0.8)..(ankleDistance*1.2)))
                         {
                             repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            errorsDoneDuringExercise++
+                            errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
                     }
                 }
             }
+
+            //println("KNEE = " + angleKnee*57.2958)
+            //println("HIP = " + angleHip*57.2958)
+            println("knee distance = " + kneeDistance)
+            println("ankle = " + ankleDistance)
+            println("phase = " + phase)
+            println("state = " + exerciseState)
 
             return phase
         }
@@ -137,14 +146,21 @@ class ExerciseManager {
                 (exerciseState == 3) and (phase == 1) -> exerciseState++
                 (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
+                    errorsDoneDuringExercise = errorsAngleHipDuringExercise + errorsKneeDistanceDuringExercise
                     if (errorsDoneDuringExercise < exerciseThresholdOnErrors) {
                         repCount++
                         errorsDoneDuringExercise = 0
+                        errorsAngleHipDuringExercise = 0
+                        errorsKneeDistanceDuringExercise = 0
                         return true
                     }
                     else {
                         errorsDoneDuringExercise = 0
-                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
+                        if (errorsKneeDistanceDuringExercise == 0) hipComment = ""
+                        if (errorsAngleHipDuringExercise == 0) kneeShoulderComment = ""
+                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + hipComment))
+                        errorsAngleHipDuringExercise = 0
+                        errorsKneeDistanceDuringExercise = 0
                         return false
                     }
                 }
