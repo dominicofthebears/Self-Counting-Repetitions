@@ -14,10 +14,10 @@ class ExerciseManager {
         var errorsDoneDuringExercise: Int = 0
         var errorsAngleHipDuringExercise: Int = 0
         var errorsKneeDistanceDuringExercise: Int = 0
-        private val exerciseThresholdOnErrors: Int = 4
+        private val exerciseThresholdOnErrors: Int = 10
         private val FORM_TAG = "Form Assessment"
-        private var hipComment = "hip not correct"
-        private var kneeShoulderComment = "knees too wide"
+        private var hipComment = "hip not correct "
+        private var kneeShoulderComment = "knees too close , "
 
         private lateinit var currentLandmark: List<NormalizedLandmark>
         //private var proximityThreshold: Float = 0.0f
@@ -75,7 +75,7 @@ class ExerciseManager {
             // - the angle between shoulder, hip and knee
             // - the distance between the knees
             when {
-                angleKnee > G145 -> {
+                (angleKnee > G145) and (angleKnee < G160) -> {
                     phase = 0
                     if ((exerciseState == 1) or (exerciseState == 0))
                     {
@@ -130,12 +130,12 @@ class ExerciseManager {
                 }
             }
 
-            println("phase = " + phase)
+            //println("phase = " + phase)
             //println("KNEE = " + angleKnee*57.2958)
             //println("HIP = " + angleHip*57.2958)
             //println("knee distance = " + kneeDistance)
-            println("ankle = " + ankleDistance)
-            println("state = " + exerciseState)
+            //println("ankle = " + ankleDistance)
+            //println("state = " + exerciseState)
             return phase
         }
         // Update the rep count according to the phase and the exercise state
@@ -148,11 +148,11 @@ class ExerciseManager {
                 (exerciseState == 3) and (phase == 1) -> exerciseState++
                 (exerciseState == 4) and (phase == 0) -> {
                     exerciseState = 0
+                    repCount++
                     errorsDoneDuringExercise = errorsAngleHipDuringExercise + errorsKneeDistanceDuringExercise
                     //println("errori sull'hip = " + errorsAngleHipDuringExercise)
                     //println("errori knee distance = " + errorsKneeDistanceDuringExercise)
                     if (errorsDoneDuringExercise < exerciseThresholdOnErrors) {
-                        repCount++
                         errorsDoneDuringExercise = 0
                         errorsAngleHipDuringExercise = 0
                         errorsKneeDistanceDuringExercise = 0
@@ -160,11 +160,12 @@ class ExerciseManager {
                     }
                     else {
                         errorsDoneDuringExercise = 0
-                        if (errorsKneeDistanceDuringExercise == 0) hipComment = ""
-                        if (errorsAngleHipDuringExercise == 0) kneeShoulderComment = ""
-                        insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + hipComment))
+                        if (errorsKneeDistanceDuringExercise == 0) kneeShoulderComment = ""
+                        if (errorsAngleHipDuringExercise == 0) hipComment = ""
+                        insertTriplet(Triple(seriesCount, repCount, kneeShoulderComment + hipComment))
                         errorsAngleHipDuringExercise = 0
                         errorsKneeDistanceDuringExercise = 0
+                        println(repsDictionary)
                         return false
                     }
                 }
