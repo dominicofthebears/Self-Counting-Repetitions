@@ -140,7 +140,6 @@ class ExerciseManager {
         }
         // Update the rep count according to the phase and the exercise state
         fun updateRepCount(phase: Int): Boolean{
-            //println("exerciseState = " + exerciseState)
             when {
                 (exerciseState == 0) and (phase == 0) -> exerciseState++
                 (exerciseState == 1) and (phase == 1) -> exerciseState++
