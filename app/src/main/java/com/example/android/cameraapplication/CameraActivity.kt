@@ -350,7 +350,6 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
                                         ) }
                                     }
                                     else{
-                                        println("Entro qui")
                                         messageReceiver?.let { bundle.putInt("averageBPM", 0) }
                                     }
 

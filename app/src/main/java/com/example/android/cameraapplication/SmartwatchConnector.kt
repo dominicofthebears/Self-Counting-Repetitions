@@ -245,14 +245,11 @@ class SmartwatchConnector: Service() {
 
     override fun onCreate() {
         super.onCreate()
-
         bluetoothManager = getSystemService(BLUETOOTH_SERVICE) as BluetoothManager
         val filter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
         registerReceiver(bluetoothReceiver, filter)
-
         val intent = Intent(this, CameraActivity.MessageReceiver::class.java)
         intent.setAction("android.intent.action.BPM_UPDATE")
-
         embeddedServer(Netty, 12345) {
             install(StatusPages) {
                 exception<Throwable> { e ->
