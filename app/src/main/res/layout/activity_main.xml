@@ -1,149 +1,129 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:background="@color/backgroundColor"
+        android:padding="16dp"
+        tools:context=".MainActivity"
+        android:id="@+id/MainLayout">
 
+    <!-- Header Section -->
     <TextView
-            android:text="Welcome to Squat Assistant!"
+            android:id="@+id/header"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/textView1"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="62dp"
-            android:layout_marginEnd="62dp"
-            android:textSize="19sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginTop="45dp"
-            android:textAlignment="center" />
+            android:text="Welcome to Squat assistant!\n\nSelect the parameters value"
+            android:textSize="24sp"
+            android:textColor="@color/headerTextColor"
+            android:fontFamily="sans-serif-light"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:paddingBottom="16dp" />
 
+    <!-- Main Content Section -->
+    <LinearLayout
+            android:id="@+id/mainContent"
+            android:layout_width="389dp"
+            android:layout_height="595dp"
+            android:orientation="vertical"
+            android:layout_below="@id/header"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/rounded_corner_background"
+            android:padding="16dp">
+
+        <TextView
+                android:id="@+id/textView1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Number of repetitions"
+                android:textSize="18sp"
+                android:textColor="@color/textColorPrimary"
+                android:fontFamily="sans-serif-light" />
+
+        <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/editTextNumber1"
+                android:textColor="@color/textColorPrimary"
+                android:layout_marginBottom="20dp" />
+
+        <TextView
+                android:id="@+id/textView2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Number of series"
+                android:textSize="18sp"
+                android:textColor="@color/textColorPrimary"
+                android:fontFamily="sans-serif-light" />
+
+        <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/editTextNumber2"
+                android:textColor="@color/textColorPrimary"
+                android:layout_marginBottom="20dp" />
+
+        <TextView
+                android:id="@+id/textView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Minutes of rest"
+                android:textSize="18sp"
+                android:textColor="@color/textColorPrimary"
+                android:fontFamily="sans-serif-light" />
+
+        <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/editTextNumber3"
+                android:textColor="@color/textColorPrimary"
+                android:layout_marginBottom="20dp" />
+
+        <TextView
+                android:id="@+id/textView4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Seconds of rest"
+                android:textSize="18sp"
+                android:textColor="@color/textColorPrimary"
+                android:fontFamily="sans-serif-light" />
+
+        <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:ems="10"
+                android:id="@+id/editTextNumber4"
+                android:textColor="@color/textColorPrimary"
+                android:layout_marginBottom="20dp" />
+
+        <Button
+                android:id="@+id/button1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Submit"
+                android:backgroundTint="@color/buttonColor"
+                android:textColor="@color/buttonTextColor"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginBottom="16dp" />
+    </LinearLayout>
+
+    <!-- Footer Section -->
     <TextView
-            android:text="Select the parameters values"
+            android:id="@+id/footer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/textView2"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="62dp"
-            android:layout_marginEnd="62dp"
-            android:textSize="19sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginTop="176dp" />
-
-    <EditText
-            android:layout_width="93dp"
-            android:layout_height="40dp"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/editTextNumber3"
-            android:layout_marginEnd="56dp"
-            android:textSize="15sp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/textView6"
-            android:layout_marginTop="5dp" />
-
-    <EditText
-            android:layout_width="93dp"
-            android:layout_height="40dp"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/editTextNumber4"
-            android:layout_marginEnd="56dp"
-            app:layout_constraintEnd_toEndOf="parent"
-
-            app:layout_constraintTop_toTopOf="@+id/textView5"
-            android:layout_marginTop="5dp"
-            android:textSize="15sp" />
-
-    <EditText
-            android:layout_width="93dp"
-            android:layout_height="40dp"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/editTextNumber5"
-            android:layout_marginEnd="56dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/textView4"
-            android:layout_marginTop="5dp"
-            android:textSize="15sp" />
-
-    <EditText
-            android:layout_width="93dp"
-            android:layout_height="40dp"
-            android:inputType="number"
-            android:ems="10"
-            android:id="@+id/editTextNumber"
-            android:layout_marginEnd="56dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/textView7"
-            android:layout_marginTop="5dp"
-            android:textSize="15sp" />
-
-    <TextView
-            android:text="Number of repetitions"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:id="@+id/textView4"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="70dp"
-            android:layout_marginBottom="10dp"
-            app:layout_constraintBottom_toTopOf="@+id/textView5"
-            app:layout_constraintTop_toTopOf="parent"
-            android:layout_marginTop="320dp"
-            android:gravity="bottom" />
-
-    <TextView
-            android:text="Number of sets"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:id="@+id/textView5"
-            android:layout_marginTop="10dp"
-            app:layout_constraintTop_toBottomOf="@+id/textView4"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="70dp"
-            android:layout_marginBottom="10dp"
-            app:layout_constraintBottom_toTopOf="@+id/textView6"
-            android:gravity="bottom" />
-
-    <TextView
-            android:text="Minutes of rest"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:id="@+id/textView6"
-            android:layout_marginTop="10dp"
-            app:layout_constraintTop_toBottomOf="@+id/textView5"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="70dp"
-            android:layout_marginBottom="10dp"
-            app:layout_constraintBottom_toTopOf="@+id/textView7"
-            android:gravity="bottom" />
-
-    <TextView
-            android:text="Seconds of rest"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:id="@+id/textView7"
-            android:layout_marginTop="10dp"
-            app:layout_constraintTop_toBottomOf="@+id/textView6"
-            app:layout_constraintStart_toStartOf="parent"
-            android:layout_marginStart="70dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            android:layout_marginBottom="262dp"
-            app:layout_constraintVertical_bias="0.644"
-            android:gravity="bottom" />
-
-    <Button
-            android:text="Submit"
-            android:layout_width="126dp"
-            android:layout_height="57dp"
-            android:id="@+id/button"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintVertical_bias="0.865"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintHorizontal_bias="0.498" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+            android:textSize="16sp"
+            android:textColor="@color/footerTextColor"
+            android:fontFamily="sans-serif-light"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:paddingTop="16dp" />
+</RelativeLayout>
