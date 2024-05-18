@@ -18,12 +18,9 @@ class ExerciseManager {
         private val FORM_TAG = "Form Assessment"
         private var hipComment = "hip not correct "
         private var kneeShoulderComment = "knees too close , "
-
         private lateinit var currentLandmark: List<NormalizedLandmark>
-        //private var proximityThreshold: Float = 0.0f
         private var exerciseState = 0
-        private val repsPerformedWrong = mutableListOf<Triple<Int, Int, String>>() // (serie,repNumber,explanation)
-        val repsDictionary = mutableMapOf<Triple<Int, Int, String>, Int>()
+        val repsDictionary = mutableMapOf<Triple<Int, Int, String>, Int>() // (serie,repNumber,explanation)
             get() = field
 
         // Constants to map radians to degrees
@@ -46,21 +43,7 @@ class ExerciseManager {
 
         fun setCurrentLandmark(landmark: List<NormalizedLandmark>) {
             currentLandmark = landmark
-            /*
-            val noseMouthL = relativeDistance(currentLandmark.get(0), currentLandmark.get(9))
-            val noseMouthR = relativeDistance(currentLandmark.get(0), currentLandmark.get(10))
-            val noseMouth = (noseMouthL + noseMouthR) / 2
-            proximityThreshold = noseMouth
-             */
         }
-        /*
-        fun checkStart(): Boolean {
-            val dist = relativeDistance(currentLandmark.get(19), currentLandmark.get(0))
-            if(dist < proximityThreshold){
-                return true
-            }else return false
-        }
-         */
 
         // Check the squat phase and form correctness
         fun checkSquatPhase(): Int {
@@ -80,16 +63,12 @@ class ExerciseManager {
                     if ((exerciseState == 1) or (exerciseState == 0))
                     {
                         if (angleHip < G140) {
-                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                            //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
                         if ((kneeDistance < (ankleDistance*4)) or (kneeDistance > ankleDistance*8))
                         {
-                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -100,16 +79,12 @@ class ExerciseManager {
                     if ((exerciseState == 2) or (exerciseState == 4))
                     {
                         if (angleHip <= G90) {
-                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, hipComment + phase))
-                            //insertTriplet(Triple(seriesCount, repCount+1, hipComment + phase))
                             errorsAngleHipDuringExercise++
                             Log.d(FORM_TAG, "HIP " + phase)
 
                         }
                         if ((kneeDistance < (ankleDistance*3)) or (kneeDistance > (ankleDistance*8)))
                         {
-                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -121,8 +96,6 @@ class ExerciseManager {
                     {
                         if ((kneeDistance < (ankleDistance*3)) or (kneeDistance > (ankleDistance*8)))
                         {
-                            repsPerformedWrong.add(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
-                            //insertTriplet(Triple(seriesCount, repCount+1, kneeShoulderComment + phase))
                             errorsKneeDistanceDuringExercise++
                             Log.d(FORM_TAG, "KNEE-SHOULDER " + phase)
                         }
@@ -149,8 +122,7 @@ class ExerciseManager {
                     exerciseState = 0
                     repCount++
                     errorsDoneDuringExercise = errorsAngleHipDuringExercise + errorsKneeDistanceDuringExercise
-                    //println("errori sull'hip = " + errorsAngleHipDuringExercise)
-                    //println("errori knee distance = " + errorsKneeDistanceDuringExercise)
+
                     if (errorsDoneDuringExercise < exerciseThresholdOnErrors) {
                         errorsDoneDuringExercise = 0
                         errorsAngleHipDuringExercise = 0
@@ -164,7 +136,6 @@ class ExerciseManager {
                         insertTriplet(Triple(seriesCount, repCount, kneeShoulderComment + hipComment))
                         errorsAngleHipDuringExercise = 0
                         errorsKneeDistanceDuringExercise = 0
-                        println(repsDictionary)
                         return false
                     }
                 }
