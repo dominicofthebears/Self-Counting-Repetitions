@@ -153,17 +153,11 @@ class CameraActivity : AppCompatActivity(), PoseLandmarkerHelper.LandmarkerListe
 
         backgroundExecutor.execute {
             poseLandmarkerHelper = PoseLandmarkerHelper(
-                //context = requireContext(),
                 context = this,
                 runningMode = RunningMode.LIVE_STREAM,
-                //minPoseDetectionConfidence = viewModel.currentMinPoseDetectionConfidence,
-                //minPoseTrackingConfidence = viewModel.currentMinPoseTrackingConfidence,
-                //minPosePresenceConfidence = viewModel.currentMinPosePresenceConfidence,
-                //currentDelegate = viewModel.currentDelegate,
                 minPoseDetectionConfidence = PoseLandmarkerHelper.DEFAULT_POSE_DETECTION_CONFIDENCE,
                 minPoseTrackingConfidence = PoseLandmarkerHelper.DEFAULT_POSE_TRACKING_CONFIDENCE,
                 minPosePresenceConfidence = PoseLandmarkerHelper.DEFAULT_POSE_PRESENCE_CONFIDENCE,
-                //currentDelegate = PoseLandmarkerHelper.DELEGATE_CPU,
                 poseLandmarkerHelperListener = this
             )
         }
